@@ -14,7 +14,7 @@ class GameConfig {
 
   // ── World ─────────────────────────────────────────────
   static const double tileSize = 32;
-  static const double groundY = 400; // y-position of the ground surface
+  static const double fallDeathBuffer = 100; // px below world bottom
 
   // ── Viewport ──────────────────────────────────────────
   static const double viewportWidth = 800;
@@ -28,6 +28,11 @@ class GameConfig {
   // ── Collectible ───────────────────────────────────────
   static const double collectibleSize = 20;
   static const int collectibleScore = 100;
+
+  // ── Combat ────────────────────────────────────────────
+  static const double stompThreshold = 15; // max overlap to count as stomp
+  static const int stompScore = 50;
+  static const double stompBounce = 0.5; // multiplier on jumpForce
 
   // ── Camera ────────────────────────────────────────────
   static const double cameraLerpSpeed = 4.0;

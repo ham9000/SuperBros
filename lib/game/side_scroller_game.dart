@@ -19,13 +19,19 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
   @override
   Color backgroundColor() => const Color(0xFF5C94FC); // sky blue
 
-  late Player player;
+  Player? _player;
   late LevelData levelData;
   final GameState gameState = GameState();
   final List<Enemy> _enemies = [];
   final List<Collectible> _collectibles = [];
   Goal? _goal;
   bool _resetting = false;
+
+  /// Null-safe accessor for touch controls and other external callers.
+  Player? get playerOrNull => _player;
+
+  /// Non-null accessor used internally after onLoad.
+  Player get player => _player!;
 
   // ── Overlay names ──────────────────────────────────────
   static const String gameOverOverlay = 'GameOver';
@@ -67,7 +73,7 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
     }
 
     // Spawn the player
-    player = Player(position: levelData.playerSpawn.clone());
+    _player = Player(position: levelData.playerSpawn.clone());
     add(player);
 
     // HUD (added to viewport so it stays fixed on screen)
@@ -88,7 +94,7 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
   void update(double dt) {
     super.update(dt);
 
-    if (gameState.isGameOver || gameState.isWin) return;
+    if (_player == null || gameState.isGameOver || gameState.isWin) return;
 
     _checkCollectibleCollisions();
     _checkEnemyCollisions();
@@ -113,13 +119,13 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
       final playerBottom = player.position.y + player.size.y;
       final enemyTop = enemy.position.y;
 
-      // Stomping: player is falling and bottom is near enemy top
-      if (player.velocity.y > 0 && playerBottom - enemyTop < 15) {
+      // Stomping: player is falling and feet are near enemy top
+      if (player.velocity.y > 0 &&
+          playerBottom - enemyTop < GameConfig.stompThreshold) {
         enemy.isActive = false;
-        player.velocity.y = GameConfig.jumpForce * 0.5; // bounce
-        gameState.addScore(50);
+        player.velocity.y = GameConfig.jumpForce * GameConfig.stompBounce;
+        gameState.addScore(GameConfig.stompScore);
       } else {
-        // Hurt player
         _onPlayerHit();
       }
     }
@@ -134,7 +140,7 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
   }
 
   void _checkFallOffMap() {
-    if (player.position.y > levelData.worldHeight + 100) {
+    if (player.position.y > levelData.worldHeight + GameConfig.fallDeathBuffer) {
       _onPlayerHit();
     }
   }
@@ -164,19 +170,22 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
     if (_resetting) return;
     _resetting = true;
 
+    // Pause first to prevent update() running on stale state
+    pauseEngine();
     overlays.remove(gameOverOverlay);
     overlays.remove(winOverlay);
 
-    // Remove all children and reload
+    // Clear all game components
     removeAll(children);
     camera.viewport.removeAll(camera.viewport.children);
     _enemies.clear();
     _collectibles.clear();
     _goal = null;
+    _player = null;
     gameState.reset();
 
-    // Reload the level after the current frame
-    Future.delayed(Duration.zero, () {
+    // Reload after removals are processed
+    Future.microtask(() {
       _loadLevel();
       resumeEngine();
       _resetting = false;
@@ -197,7 +206,7 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
       return KeyEventResult.handled;
     }
 
-    player.onKeyEvent(event);
+    _player?.onKeyEvent(event);
     return KeyEventResult.handled;
   }
 }
