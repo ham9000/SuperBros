@@ -6,7 +6,7 @@ import 'ground.dart';
 /// A simple enemy that patrols back and forth on a platform.
 ///
 /// Reverses direction when it hits a wall or reaches a ledge.
-class Enemy extends PositionComponent with HasGameReference {
+class Enemy extends PositionComponent {
   Enemy({required Vector2 position})
       : _direction = 1,
         _speed = GameConfig.enemySpeed,
@@ -38,7 +38,7 @@ class Enemy extends PositionComponent with HasGameReference {
   /// Check if the enemy should reverse: either it hit a wall
   /// or there's no ground ahead (ledge detection).
   bool _shouldReverse() {
-    final grounds = game.children.whereType<Ground>();
+    final grounds = parent?.children.whereType<Ground>() ?? [];
     final probeX = _direction > 0
         ? position.x + size.x + 2
         : position.x - 2;

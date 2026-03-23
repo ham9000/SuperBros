@@ -25,6 +25,7 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
   final List<Enemy> _enemies = [];
   final List<Collectible> _collectibles = [];
   Goal? _goal;
+  Hud? _hud;
   bool _resetting = false;
 
   /// Null-safe accessor for touch controls and other external callers.
@@ -47,37 +48,38 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
     // Load level data
     levelData = LevelLoader.load(LevelLoader.level1);
 
-    // Add ground blocks
+    // Add ground blocks to the world (not game root)
     for (final component in levelData.components) {
-      add(component);
+      world.add(component);
     }
 
     // Spawn enemies
     for (final pos in levelData.enemySpawns) {
       final enemy = Enemy(position: pos.clone());
       _enemies.add(enemy);
-      add(enemy);
+      world.add(enemy);
     }
 
     // Spawn collectibles
     for (final pos in levelData.collectiblePositions) {
       final collectible = Collectible(position: pos.clone());
       _collectibles.add(collectible);
-      add(collectible);
+      world.add(collectible);
     }
 
     // Spawn goal
     if (levelData.goalPosition != null) {
       _goal = Goal(position: levelData.goalPosition!.clone());
-      add(_goal!);
+      world.add(_goal!);
     }
 
     // Spawn the player
     _player = Player(position: levelData.playerSpawn.clone());
-    add(player);
+    world.add(player);
 
     // HUD (added to viewport so it stays fixed on screen)
-    camera.viewport.add(Hud(gameState: gameState));
+    _hud = Hud(gameState: gameState);
+    camera.viewport.add(_hud!);
 
     // Camera follows the player
     camera.follow(player, maxSpeed: 300, snap: true);
@@ -95,6 +97,15 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
     super.update(dt);
 
     if (_player == null || gameState.isGameOver || gameState.isWin) return;
+
+    // Keep player within world horizontal bounds
+    if (player.position.x < 0) {
+      player.position.x = 0;
+      player.velocity.x = 0;
+    } else if (player.position.x + player.size.x > levelData.worldWidth) {
+      player.position.x = levelData.worldWidth - player.size.x;
+      player.velocity.x = 0;
+    }
 
     _checkCollectibleCollisions();
     _checkEnemyCollisions();
@@ -175,9 +186,12 @@ class SideScrollerGame extends FlameGame with KeyboardEvents {
     overlays.remove(gameOverOverlay);
     overlays.remove(winOverlay);
 
-    // Clear all game components
-    removeAll(children);
-    camera.viewport.removeAll(camera.viewport.children);
+    // Clear all game world components (not the world/camera themselves)
+    world.removeAll(world.children);
+    if (_hud != null) {
+      camera.viewport.remove(_hud!);
+      _hud = null;
+    }
     _enemies.clear();
     _collectibles.clear();
     _goal = null;

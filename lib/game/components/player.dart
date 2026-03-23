@@ -6,7 +6,7 @@ import 'ground.dart';
 
 /// The player character — a colored rectangle with manual
 /// platformer physics (gravity, jump, ground collision).
-class Player extends PositionComponent with HasGameReference {
+class Player extends PositionComponent {
   Player({required Vector2 position})
       : velocity = Vector2.zero(),
         _isOnGround = false,
@@ -94,7 +94,7 @@ class Player extends PositionComponent with HasGameReference {
   void _resolveGroundCollisions() {
     _isOnGround = false;
 
-    final grounds = game.children.whereType<Ground>();
+    final grounds = parent?.children.whereType<Ground>() ?? [];
     for (final ground in grounds) {
       if (_overlaps(ground)) {
         _resolveCollision(ground);
