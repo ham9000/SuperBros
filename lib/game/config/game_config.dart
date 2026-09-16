@@ -1,42 +1,75 @@
-/// Centralized tunable constants for the game.
-///
-/// All physics values, sizes, and speeds live here so they're
-/// easy to find and tweak during prototyping.
-class GameConfig {
-  // ── Player ────────────────────────────────────────────
-  static const double playerWidth = 32;
-  static const double playerHeight = 48;
-  static const double playerSpeed = 200; // px/s
-  static const double jumpForce = -400; // negative = upward
-  static const double gravity = 1000; // px/s²
-  static const double maxFallSpeed = 600;
-  static const int startingLives = 3;
-
-  // ── World ─────────────────────────────────────────────
-  static const double tileSize = 32;
-  static const double fallDeathBuffer = 100; // px below world bottom
-
-  // ── Viewport ──────────────────────────────────────────
-  static const double viewportWidth = 800;
-  static const double viewportHeight = 600;
-
-  // ── Enemy ─────────────────────────────────────────────
-  static const double enemySpeed = 60;
-  static const double enemyWidth = 32;
-  static const double enemyHeight = 32;
-
-  // ── Collectible ───────────────────────────────────────
-  static const double collectibleSize = 20;
-  static const int collectibleScore = 100;
-
-  // ── Combat ────────────────────────────────────────────
-  static const double stompThreshold = 15; // max overlap to count as stomp
-  static const int stompScore = 50;
-  static const double stompBounce = 0.5; // multiplier on jumpForce
-
-  // ── Camera ────────────────────────────────────────────
-  static const double cameraLerpSpeed = 4.0;
-
-  // ── Debug ─────────────────────────────────────────────
-  static const bool debugMode = false;
+/// Simulation tuning in world pixels and seconds.
+abstract final class GameConfig {
+  static const double viewportWidth = 480;
+  static const double viewportHeight = 270;
+  static const double groundY = 218;
+  static const double worldWidth = 9600;
+  static const double bossArenaStart = 8980;
+  static const double checkpointX = 4380;
+  static const double preBossCheckpointX = 8770;
+  static const double playerWidth = 18;
+  static const double playerHeight = 30;
+  static const double crouchHeight = 18;
+  static const double playerSpeed = 92;
+  static const double crouchSpeed = 43;
+  static const double jumpForce = -320;
+  static const double gravity = 780;
+  static const double maxFallSpeed = 420;
+  static const int maxHealth = 100;
+  static const int startingGrenades = 4;
+  static const double invulnerability = 0.85;
+  static const double sidearmCooldown = 0.23;
+  static const double rapidCooldown = 0.09;
+  static const double launcherCooldown = 0.6;
+  static const double meleeCooldown = 0.38;
+  static const double meleeRange = 37;
+  static const int bulletDamage = 10;
+  static const int meleeDamage = 24;
+  static const int explosionDamage = 44;
+  static const double explosionRadius = 68;
+  static const double bulletSpeed = 390;
+  static const double hostileBulletSpeed = 140;
+  static const int enemyDamage = 12;
+  static const int rapidAmmo = 90;
+  static const int launcherAmmo = 12;
+  static const int rescueScore = 500;
+  static const int enemyScore = 100;
+  static const int bossScore = 2500;
+  static const int rescueHealth = 20;
+  static const double vehicleSpeed = 116;
+  static const int vehicleHealth = 150;
+  static const double vehicleFireCooldown = 0.35;
+  static const int vehicleBulletDamage = 28;
+  static const int bossHealth = 420;
+  static const double bossOpeningTelegraph = 1.5;
+  static const double bossTelegraph = 1.2;
+  static const double bossPhaseTwoTelegraph = 0.8;
+  static const double bossVulnerableTime = 1.9;
+  static const double bossPhaseTwoVulnerableTime = 1.45;
+  static const double bossBurstTime = 1.2;
+  static const double bossAttackTime = 0.75;
+  static const double bossShotInterval = 0.3;
+  static const double bossPhaseTwoShotInterval = 0.18;
+  static const double bossVictoryDelay = 1.6;
+  static const int infantryHealth = 30;
+  static const int shieldHealth = 50;
+  static const int turretHealth = 60;
+  static const double enemyTelegraph = 0.8;
+  static const double turretTelegraph = 1.15;
+  static const double enemyAttackTime = 0.22;
+  static const double enemyHurtTime = 0.2;
+  static const double grenadeCooldown = 0.55;
+  static const double grenadeFuse = 1.45;
+  static const double grenadeSpeed = 155;
+  static const double grenadeLaunchSpeed = -235;
+  static const int maxGrenades = 12;
+  static const int medkitHealth = 35;
+  static const int grenadePickupCount = 3;
+  static const int encounterCount = 30;
+  static const double encounterSpacing = 277;
+  static const double enemyAwareness = 255;
+  static const double enemySpeed = 23;
+  static const double cameraLerpSpeed = 7;
+  static const double maxFrameTime = 0.1;
+  static const double simulationStep = 1 / 120;
 }

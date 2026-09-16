@@ -1,9 +1,68 @@
-# SuperBros
-Test Game Prototype
+# Operation Ruckus
 
-A Flutter/Flame side-scroller. Move with **A/D** or **Left/Right**, jump with
-**W/Up/Space**, and restart with **R**. Native Android/iOS builds have touch
-controls; the web build currently requires a keyboard.
+An original, playable comic-book run-and-gun built with Flutter and Flame.
+Play as **Rook** and liberate **Iron Harbor** from the Brass Bureau: rescue the
+dock crew, commandeer the **Bullfrog** scout vehicle, and take down the
+**Ironjaw Siege Walker**. All character and world artwork is generated in code;
+no assets from existing arcade games are used.
+
+## Play
+
+The title leads through the main menu, crew selection, and mission selection.
+Rook and Iron Harbor are playable. Nyx, Bolt, Mae, Desert Convoy, and Jungle
+Foundry are clearly locked future content, including after mission completion.
+
+| Input | Action |
+| --- | --- |
+| A/D or Left/Right | Move |
+| W or Up | Aim upward |
+| S or Down | Crouch |
+| Space | Jump |
+| J (hold) | Fire; automatically melee an enemy within reach |
+| K | Throw grenade |
+| E or L | Rescue nearby crew / enter or exit vehicle |
+| Escape | Pause / resume / back |
+| Enter | Advance title and default menu selections |
+
+Touch controls are available on **all platforms, including mobile web**. Hold
+the D-pad and FIRE; tap JUMP, BOOM, or USE. The gamepad icon toggles touch
+controls. Controls respect device safe areas. Native mobile uses landscape;
+rotate a browser into landscape for the best experience.
+
+Iron Harbor includes infantry, frontal shields, telegraphing turrets, weapon
+and supply pickups, destructible crates and explosive barrels, elevated
+platforms, six captives, two checkpoints, a usable vehicle, and a phased boss
+with cannon bursts, arcing bombs, and jumpable ground shockwaves. Shields can
+be flanked, meleed, or blasted. Special weapons switch back to the unlimited
+sidearm when empty. Shoot restraints or interact to rescue crew.
+
+Death opens the results screen. **Retry** restores the latest checkpoint
+snapshot (including score and rescue progress); **Restart Mission** in pause
+starts fresh. Defeat the walker to reach victory. Its warning lights telegraph
+attacks; attack when its vents open. The vehicle is powerful but cannot jump
+the boss's shockwaves.
+
+## Architecture
+
+* `lib/game/core/`: deterministic, sub-stepped Dart simulation, entities,
+  command input, audio events, and lightweight local progress storage.
+* `lib/game/config/game_config.dart`: centralized movement/combat tuning.
+* `lib/game/side_scroller_game.dart`: Flame clock and fixed 480×270 viewport.
+* `lib/game/rendering/pixel_art.dart`: centralized sprite identifiers, original
+  hard-edged pixel artwork, parallax harbor, particles, and comic callouts.
+* `lib/game/input/`: source-aware keyboard/touch routing. Releasing one source
+  does not cancel another; pause/focus loss clears held commands.
+* `lib/game/ui/`: navigation catalogs, selection locking, menus, HUD, touch
+  controls, and pause/results flows.
+
+Shared preferences stores only best score, completion, and help acknowledgement.
+Unavailable storage falls back to session-only progress. Audio is deliberately
+silent, with an event bus ready for original menu, weapon, impact, rescue,
+vehicle, boss, and victory sounds; no missing audio asset can crash the game.
+
+The art is a coherent programmatic placeholder set rather than production
+sprite sheets. The mission targets a short arcade run; difficulty and the
+three-to-six-minute new-player pacing still merit broader playtesting.
 
 ## Development and verification
 
@@ -12,16 +71,21 @@ From the repository root:
 
 ```sh
 flutter pub get --enforce-lockfile
+dart format --output=none --set-exit-if-changed .
 flutter analyze
 flutter test --coverage
 flutter test --platform chrome test/game_runtime_test.dart
 flutter build web --release --base-href /SuperBros/ --no-web-resources-cdn
+flutter build apk --debug
 ```
 
 Chrome must be installed for browser tests. Set `CHROME_EXECUTABLE` to its
 executable path if Flutter cannot find it. The runtime suite mounts the real app
-and checks keyboard movement, jumping, collecting, winning, losing lives, and
-restart/overlay wiring. It runs as Flutter widget tests on both the VM and
+and checks menu locking/navigation, keyboard and touch input, pause/help,
+checkpoint retry, and projectile-driven boss victory/results wiring. The
+simulation suite covers combat, weapons, rescues, vehicles, and boss attacks.
+Runtime tests use controlled state setup for distant encounters, not a claimed
+full-length human playthrough. They run as Flutter widget tests on both the VM and
 headless Chrome, not as an end-to-end test of the release bundle.
 
 For interactive testing, run `flutter run -d chrome`. Also test the **release

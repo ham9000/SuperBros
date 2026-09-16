@@ -1,129 +1,207 @@
-import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:super_bros/game/components/collectible.dart';
-import 'package:super_bros/game/components/player.dart';
 import 'package:super_bros/game/config/game_config.dart';
-import 'package:super_bros/game/side_scroller_game.dart';
-import 'package:super_bros/game/ui/game_over_overlay.dart';
-import 'package:super_bros/game/ui/hud.dart';
-import 'package:super_bros/game/ui/win_overlay.dart';
-import 'package:super_bros/main.dart' as app;
+import 'package:super_bros/game/core/game_state.dart';
+import 'package:super_bros/game/core/progress_store.dart';
+import 'package:super_bros/game/ui/menu_state.dart';
+import 'package:super_bros/game/ui/ruckus_app.dart';
 
-Future<SideScrollerGame> startGame(WidgetTester tester) async {
-  app.main();
+Future<RuckusShellState> launch(WidgetTester tester) async {
+  await tester.binding.setSurfaceSize(const Size(960, 540));
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+  await tester.pumpWidget(RuckusApp(progress: ProgressStore()));
   await tester.pump();
-  final widget = tester.widget<GameWidget>(
-    find.byWidgetPredicate((widget) => widget is GameWidget),
-  );
-  final game = widget.game as SideScrollerGame;
-  await tester.runAsync(() => game.loaded.timeout(const Duration(seconds: 15)));
+  return tester.state<RuckusShellState>(find.byType(RuckusShell));
+}
+
+Future<void> deploy(WidgetTester tester, RuckusShellState shell) async {
+  for (var i = 0; i < 4; i++) {
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+  }
+  await tester.runAsync(() => shell.game!.loaded);
   await tester.pump();
-  game.pauseEngine();
-  await tester.runAsync(() => game.ready().timeout(const Duration(seconds: 15)));
-  game.update(1 / 60);
-  return game;
+  shell.game!.pauseEngine();
+}
+
+Future<void> tapButton(WidgetTester tester, String label) async {
+  await tester.tap(find.widgetWithText(ElevatedButton, label));
+  await tester.pump();
+}
+
+void step(RuckusShellState shell, double seconds) {
+  for (var i = 0; i < (seconds * 60).ceil(); i++) {
+    shell.game!.update(1 / 60);
+  }
 }
 
 void main() {
-  testWidgets('game loads, renders, and responds to movement and jump keys',
-      (tester) async {
-    final game = await startGame(tester);
-    expect(game.player.isMounted, isTrue);
-    expect(game.player.isOnGround, isTrue);
-    expect(game.camera.viewport.children.whereType<Hud>(), hasLength(1));
-    final startX = game.player.x;
+  testWidgets(
+    'title, back, locking, and keyboard deployment use actual menus',
+    (tester) async {
+      final shell = await launch(tester);
+      expect(shell.menu.screen, AppScreen.title);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(shell.menu.screen, AppScreen.main);
+      await tapButton(tester, 'HOW TO PLAY');
+      expect(shell.menu.screen, AppScreen.help);
+      await tapButton(tester, 'GOT IT  ✓');
+      expect(shell.menu.screen, AppScreen.main);
+      await tapButton(tester, 'PLAY  ▶');
+      expect(shell.menu.screen, AppScreen.characters);
+      final lockedCharacters = tester
+          .widgetList<ElevatedButton>(find.byType(ElevatedButton))
+          .where((button) => button.onPressed == null);
+      expect(
+        lockedCharacters.length,
+        MenuState.characters.where((c) => c.locked).length,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pump();
+      expect(shell.menu.screen, AppScreen.levels);
+      expect(
+        tester
+            .widgetList<ElevatedButton>(find.byType(ElevatedButton))
+            .where((button) => button.onPressed == null)
+            .length,
+        MenuState.levels.where((level) => level.locked).length,
+      );
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+      expect(shell.menu.screen, AppScreen.characters);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.arrowRight);
-    for (var frame = 0; frame < 10; frame++) {
-      game.update(1 / 60);
-    }
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.arrowRight);
-    expect(game.player.x, greaterThan(startX));
+  testWidgets('keyboard and touch move, jump, fire, and release safely', (
+    tester,
+  ) async {
+    final shell = await launch(tester);
+    await deploy(tester, shell);
+    final s = shell.session!;
+    final initialX = s.player.x;
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyD);
+    step(shell, .3);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyD);
+    expect(s.player.x, greaterThan(initialX));
+    final stoppedX = s.player.x;
+    step(shell, .1);
+    expect(s.player.x, stoppedX);
+    await tester.sendKeyEvent(LogicalKeyboardKey.space);
+    step(shell, .1);
+    expect(s.player.y, lessThan(GameConfig.groundY - s.player.height));
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyJ);
+    step(shell, .1);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyJ);
+    expect(s.projectiles.where((shot) => !shot.hostile), isNotEmpty);
 
-    final stoppedX = game.player.x;
-    game.update(1 / 60);
-    expect(game.player.x, stoppedX);
-    final groundY = game.player.y;
-
-    await tester.sendKeyDownEvent(LogicalKeyboardKey.space);
-    game.update(1 / 60);
-    await tester.sendKeyUpEvent(LogicalKeyboardKey.space);
-    expect(game.player.y, lessThan(groundY));
-    expect(game.player.velocity.y, isNegative);
+    final finger = await tester.startGesture(tester.getCenter(find.text('→')));
+    step(shell, .2);
+    expect(s.player.x, greaterThan(stoppedX));
+    await finger.cancel();
+    expect(s.input.held(Command.right), isFalse);
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('collecting, winning, and replaying use the real app overlays',
-      (tester) async {
-    final game = await startGame(tester);
-    final initialComponents = game.world.children.length;
-    final collectible = game.world.children.whereType<Collectible>().first;
-
-    game.player.position.setFrom(collectible.position);
-    game.player.velocity.setZero();
-    game.update(0);
-    expect(game.gameState.score, GameConfig.collectibleScore);
-    expect(collectible.isCollected, isTrue);
-    game.update(0);
-    expect(game.gameState.score, GameConfig.collectibleScore);
-
-    game.player.position.setFrom(game.levelData.goalPosition!);
-    game.player.velocity.setZero();
-    game.update(0);
+  testWidgets('pause freezes, help preserves game, resume and restart work', (
+    tester,
+  ) async {
+    final shell = await launch(tester);
+    await deploy(tester, shell);
+    final s = shell.session!;
+    final game = shell.game;
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.keyD);
+    step(shell, .2);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
-    expect(game.gameState.isWin, isTrue);
-    expect(game.paused, isTrue);
-    expect(find.byType(WinOverlay), findsOneWidget);
-
-    await tester.tap(find.descendant(
-      of: find.byType(WinOverlay),
-      matching: find.byType(ElevatedButton),
-    ));
+    expect(s.status, MissionStatus.paused);
+    final x = s.player.x;
+    step(shell, 1);
+    expect(s.player.x, x);
+    expect(s.input.held(Command.right), isFalse);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.keyD);
+    await tapButton(tester, 'CONTROLS');
+    expect(shell.menu.screen, AppScreen.help);
+    await tapButton(tester, 'GOT IT  ✓');
+    expect(shell.game, same(game));
+    expect(s.status, MissionStatus.paused);
+    await tapButton(tester, 'RESUME');
+    expect(s.status, MissionStatus.playing);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
     await tester.pump();
-    await tester.runAsync(() => game.ready().timeout(const Duration(seconds: 15)));
-    expect(game.paused, isFalse);
-    game.pauseEngine();
-    expect(game.gameState.score, 0);
-    expect(game.gameState.isWin, isFalse);
-    expect(find.byType(WinOverlay), findsNothing);
-    expect(game.world.children.whereType<Player>(), hasLength(1));
-    expect(game.world.children, hasLength(initialComponents));
-    expect(game.camera.viewport.children.whereType<Hud>(), hasLength(1));
+    await tapButton(tester, 'RESTART MISSION');
+    expect(s.player.x, lessThan(x));
+    expect(s.score, 0);
+    expect(s.status, MissionStatus.playing);
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('falling exhausts lives and R restarts after game over',
-      (tester) async {
-    final game = await startGame(tester);
-    for (var remaining = GameConfig.startingLives - 1;
-        remaining >= 0;
-        remaining--) {
-      game.player.y =
-          game.levelData.worldHeight + GameConfig.fallDeathBuffer + 1;
-      game.player.velocity.setZero();
-      game.update(0);
-      expect(game.gameState.lives, remaining);
-      if (remaining > 0) {
-        expect(game.player.position, game.levelData.playerSpawn);
-        expect(game.gameState.isGameOver, isFalse);
-      }
-    }
+  testWidgets('death, checkpoint retry, boss victory and menu exit are wired', (
+    tester,
+  ) async {
+    final shell = await launch(tester);
+    await deploy(tester, shell);
+    final s = shell.session!;
+    s.player.x = GameConfig.preBossCheckpointX + 1;
+    step(shell, .1);
+    expect(s.checkpointReached, isTrue);
+    s.player.invulnerable = 0;
+    s.damagePlayer(GameConfig.maxHealth);
     await tester.pump();
-    expect(game.gameState.isGameOver, isTrue);
-    expect(find.byType(GameOverOverlay), findsOneWidget);
+    expect(s.status, MissionStatus.gameOver);
+    await tapButton(tester, 'RETRY');
+    expect(s.status, MissionStatus.playing);
+    expect(s.player.x, greaterThan(GameConfig.checkpointX));
+    expect(s.player.health, GameConfig.maxHealth);
 
-    await tester.sendKeyEvent(LogicalKeyboardKey.keyR);
+    s.player.x = GameConfig.bossArenaStart + 20;
+    step(shell, .1);
+    expect(s.boss.active, isTrue);
+    // Use the normal projectile collision/vulnerability path, not a win flag.
+    s.boss.hp = GameConfig.bulletDamage;
+    s.boss.vulnerable = true;
+    s.boss.telegraph = false;
+    s.boss.timer = 1;
+    s.projectiles.add(
+      Projectile(
+        x: s.boss.x,
+        y: s.boss.y + 10,
+        vx: 0,
+        vy: 0,
+        damage: GameConfig.bulletDamage,
+      ),
+    );
+    step(shell, 4);
     await tester.pump();
-    await tester.runAsync(() => game.ready().timeout(const Duration(seconds: 15)));
-    expect(game.paused, isFalse);
-    game.pauseEngine();
-    expect(game.gameState.isGameOver, isFalse);
-    expect(game.gameState.lives, GameConfig.startingLives);
-    expect(find.byType(GameOverOverlay), findsNothing);
-    expect(game.world.children.whereType<Player>(), hasLength(1));
+    expect(s.status, MissionStatus.victory);
+    await tapButton(tester, 'LEVEL SELECT');
+    expect(shell.menu.screen, AppScreen.levels);
+    expect(shell.session, isNull);
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+    await tester.pump();
+    expect(shell.menu.screen, AppScreen.main);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('common landscape phone layout keeps menus and touch usable', (
+    tester,
+  ) async {
+    final shell = await launch(tester);
+    await tester.binding.setSurfaceSize(const Size(740, 360));
+    await tester.pump();
+    await deploy(tester, shell);
+    await tester.pump();
+    for (final label in ['FIRE', 'JUMP', 'BOOM', 'USE']) {
+      final rect = tester.getRect(find.text(label));
+      expect(rect.left, greaterThanOrEqualTo(0));
+      expect(rect.right, lessThanOrEqualTo(740));
+      expect(rect.bottom, lessThanOrEqualTo(360));
+    }
     expect(tester.takeException(), isNull);
   });
 }
