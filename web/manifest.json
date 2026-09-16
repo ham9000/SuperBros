@@ -1,12 +1,12 @@
 {
-    "name": "super_bros",
-    "short_name": "super_bros",
+    "name": "Operation Ruckus",
+    "short_name": "Ruckus",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#102c3a",
+    "theme_color": "#102c3a",
+    "description": "Original comic-book arcade action in Iron Harbor.",
+    "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [
         {

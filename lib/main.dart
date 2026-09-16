@@ -1,51 +1,14 @@
-import 'package:flame/game.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'game/side_scroller_game.dart';
-import 'game/input/touch_controls.dart';
-import 'game/ui/game_over_overlay.dart';
-import 'game/ui/win_overlay.dart';
+import 'package:flutter/services.dart';
 
-void main() {
-  final game = SideScrollerGame();
+import 'game/core/progress_store.dart';
+import 'game/ui/ruckus_app.dart';
 
-  // Show touch controls on mobile platforms
-  final showTouch = !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
-
-  runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: Stack(
-          children: [
-            GameWidget(
-              game: game,
-              overlayBuilderMap: {
-                SideScrollerGame.gameOverOverlay: (context, game) =>
-                    GameOverOverlay(game: game as SideScrollerGame),
-                SideScrollerGame.winOverlay: (context, game) =>
-                    WinOverlay(game: game as SideScrollerGame),
-              },
-            ),
-            if (showTouch)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: TouchControls(
-                  onLeftPressed: () => game.playerOrNull?.startMoveLeft(),
-                  onLeftReleased: () => game.playerOrNull?.stopMoveLeft(),
-                  onRightPressed: () => game.playerOrNull?.startMoveRight(),
-                  onRightReleased: () => game.playerOrNull?.stopMoveRight(),
-                  onJumpPressed: () => game.playerOrNull?.startJump(),
-                  onJumpReleased: () => game.playerOrNull?.stopJump(),
-                ),
-              ),
-          ],
-        ),
-      ),
-    ),
-  );
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.landscapeRight,
+  ]);
+  runApp(RuckusApp(progress: await ProgressStore.load()));
 }
