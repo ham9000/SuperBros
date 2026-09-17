@@ -1,9 +1,12 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:super_bros/game/config/game_config.dart';
 import 'package:super_bros/game/core/game_state.dart';
 import 'package:super_bros/game/core/progress_store.dart';
+import 'package:super_bros/game/rendering/pixel_art.dart';
 import 'package:super_bros/game/ui/menu_state.dart';
 import 'package:super_bros/game/ui/ruckus_app.dart';
 
@@ -105,6 +108,110 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('holding touch FIRE uses pistol cadence while walking', (
+    tester,
+  ) async {
+    final shell = await launch(tester);
+    await deploy(tester, shell);
+    final s = shell.session!;
+    s.pickups.clear();
+    var shots = 0;
+    s.audio.onEvent = (event) {
+      if (event == AudioEvent.shot) shots++;
+    };
+    final fire = await tester.startGesture(
+      tester.getCenter(find.text('FIRE')),
+      pointer: 1,
+    );
+    final walk = await tester.startGesture(
+      tester.getCenter(find.text('→')),
+      pointer: 2,
+    );
+    step(shell, 1);
+    expect(shots, 3);
+    expect(s.player.x, greaterThan(100));
+    expect(s.player.ammo, 0);
+    expect(s.enemies.last.lifecycle, EnemyLifecycle.dormant);
+    await fire.up();
+    await walk.cancel();
+    step(shell, 0.5);
+    expect(shots, 3);
+    expect(s.input.held(Command.fire), isFalse);
+    expect(s.input.held(Command.right), isFalse);
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'procedural entrances render warnings before sprites and animate all seven',
+    (tester) async {
+      Future<int> render(GameState state) async {
+        final recorder = ui.PictureRecorder();
+        PixelArt.renderScene(ui.Canvas(recorder), state);
+        final picture = recorder.endRecording();
+        final image = await picture.toImage(480, 270);
+        final data = await image.toByteData();
+        final digest = Object.hashAll(data!.buffer.asUint8List());
+        image.dispose();
+        picture.dispose();
+        return digest;
+      }
+
+      await tester.runAsync(() async {
+        final state = GameState()..calloutTime = 0;
+        state.enemies.clear();
+        final empty = await render(state);
+        state.enemies.add(Enemy(x: 360, kind: EnemyType.infantry));
+        expect(
+          await render(state),
+          empty,
+          reason: 'Dormant enemies must be invisible',
+        );
+        const context = EnemySpawnContext(playerX: 160, cameraX: 0);
+        for (final type in EntranceType.values) {
+          final spawn = EnemySpawnDefinition(
+            marker: const EntranceMarker(
+              id: 'test',
+              x: 360,
+              allowed: {...EntranceType.values},
+            ),
+            forced: type,
+            scripted: type == EntranceType.rearAmbush,
+          );
+          final enemy = Enemy(
+            x: 360,
+            kind: EnemyType.infantry,
+            spawn: spawn,
+            entrance: EntranceSelector(
+              4,
+            ).chooseEntrance(EnemyType.infantry, spawn, context),
+          );
+          state.enemies
+            ..clear()
+            ..add(enemy);
+          final dormant = await render(state);
+          expect(enemy.beginEntrance(context), isTrue);
+          final warning = await render(state);
+          expect(
+            warning,
+            isNot(dormant),
+            reason: '${type.name} needs a pre-arrival warning',
+          );
+          enemy.updateEntrance(1.25, context);
+          final moving = await render(state);
+          expect(
+            moving,
+            isNot(warning),
+            reason: '${type.name} must animate, not just wait',
+          );
+          enemy.updateEntrance(0.21, context);
+          expect(await render(state), isNot(moving));
+        }
+      });
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('pause freezes, help preserves game, resume and restart work', (
     tester,

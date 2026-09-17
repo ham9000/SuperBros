@@ -173,6 +173,91 @@ void main() {
       expect(game.player.ammo, 0);
     });
 
+    test('held sidearm fires immediately with bounded shot intervals', () {
+      for (final frameTime in [1 / 30, 1 / 60, 1 / 120]) {
+        final game = emptyGame();
+        final shots = <double>[];
+        game.audio.onEvent = (event) {
+          if (event == AudioEvent.shot) shots.add(game.elapsed);
+        };
+        game.input.press(Command.fire);
+        game.update(frameTime);
+        expect(shots, hasLength(1));
+        expect(shots.single, lessThanOrEqualTo(GameConfig.simulationStep));
+        for (var i = 1; i < (2 / frameTime).round(); i++) {
+          game.update(frameTime);
+        }
+        expect(shots, hasLength(6));
+        for (var i = 1; i < shots.length; i++) {
+          expect(shots[i] - shots[i - 1], greaterThanOrEqualTo(0.36));
+          expect(
+            shots[i] - shots[i - 1],
+            lessThanOrEqualTo(0.36 + GameConfig.simulationStep),
+          );
+        }
+        expect(game.player.weapon, WeaponType.sidearm);
+        expect(game.player.ammo, 0);
+      }
+    });
+
+    test('releasing and repressing fire cannot bypass sidearm cooldown', () {
+      final game = emptyGame();
+      var shots = 0;
+      game.audio.onEvent = (event) {
+        if (event == AudioEvent.shot) shots++;
+      };
+      tap(game, Command.fire);
+      expect(shots, 1);
+      for (var i = 0; i < 40; i++) {
+        tap(game, Command.fire);
+      }
+      expect(shots, 1);
+      game.input.press(Command.fire);
+      advance(game, 0.05);
+      expect(shots, 2);
+      game.input.release(Command.fire);
+      advance(game, 0.5);
+      expect(shots, 2);
+      tap(game, Command.fire);
+      expect(shots, 3);
+    });
+
+    test('held rapid fire spends finite ammo then resumes sidearm cadence', () {
+      final game = emptyGame();
+      final shots = <double>[];
+      game.audio.onEvent = (event) {
+        if (event == AudioEvent.shot) shots.add(game.elapsed);
+      };
+      game.player.weapon = WeaponType.rapid;
+      game.player.ammo = GameConfig.rapidAmmo;
+      expect(GameConfig.rapidAmmo, 90);
+      game.input.press(Command.fire);
+      while (game.player.ammo > 0 && game.elapsed < 10) {
+        game.update(GameConfig.simulationStep);
+      }
+      expect(shots, hasLength(90));
+      expect(game.player.ammo, 0);
+      expect(game.player.weapon, WeaponType.sidearm);
+      for (var i = 1; i < shots.length; i++) {
+        expect(shots[i] - shots[i - 1], greaterThanOrEqualTo(0.09));
+        expect(
+          shots[i] - shots[i - 1],
+          lessThanOrEqualTo(0.09 + GameConfig.simulationStep),
+        );
+      }
+      advance(game, 1);
+      expect(shots, hasLength(93));
+      expect(shots[90] - shots[89], greaterThanOrEqualTo(0.09));
+      for (var i = 91; i < shots.length; i++) {
+        expect(shots[i] - shots[i - 1], greaterThanOrEqualTo(0.36));
+        expect(
+          shots[i] - shots[i - 1],
+          lessThanOrEqualTo(0.36 + GameConfig.simulationStep),
+        );
+      }
+      expect(game.player.ammo, 0);
+    });
+
     test('rapid and launcher ammo deplete and fall back to sidearm', () {
       for (final weapon in [WeaponType.rapid, WeaponType.launcher]) {
         final game = emptyGame();
@@ -190,7 +275,7 @@ void main() {
 
     test('nearby enemies trigger melee without spending special ammo', () {
       final game = emptyGame();
-      final enemy = Enemy(x: 78, kind: EnemyType.shield);
+      final enemy = Enemy(x: 78, kind: EnemyType.shield)..activateCombat();
       game.enemies.add(enemy);
       game.player.weapon = WeaponType.rapid;
       game.player.ammo = 5;
@@ -222,7 +307,7 @@ void main() {
 
     test('enemy defeats award score once and explosions bypass shields', () {
       final game = emptyGame();
-      final enemy = Enemy(x: 150, kind: EnemyType.shield);
+      final enemy = Enemy(x: 150, kind: EnemyType.shield)..activateCombat();
       game.enemies.add(enemy);
       game.projectiles.add(bulletAt(enemy, explosive: true));
       game.update(1 / 60);
@@ -239,7 +324,7 @@ void main() {
 
     test('shield blocks frontal bullets but opens during an attack', () {
       final game = emptyGame();
-      final enemy = Enemy(x: 150, kind: EnemyType.shield);
+      final enemy = Enemy(x: 150, kind: EnemyType.shield)..activateCombat();
       game.enemies.add(enemy);
       game.projectiles.add(bulletAt(enemy));
       game.update(1 / 120);
@@ -254,7 +339,7 @@ void main() {
     test('all enemy types telegraph before firing and recover from hurt', () {
       for (final kind in EnemyType.values) {
         final game = emptyGame();
-        final enemy = Enemy(x: 200, kind: kind);
+        final enemy = Enemy(x: 200, kind: kind)..activateCombat();
         game.enemies.add(enemy);
         game.update(1 / 120);
         expect(enemy.mode, EnemyMode.alert);
@@ -273,7 +358,7 @@ void main() {
       final first = Prop(x: 150);
       final second = Prop(x: 190);
       game.props.addAll([first, second]);
-      final enemy = Enemy(x: 220, kind: EnemyType.infantry);
+      final enemy = Enemy(x: 220, kind: EnemyType.infantry)..activateCombat();
       game.enemies.add(enemy);
       game.projectiles.addAll([bulletAt(first), bulletAt(first)]);
       game.update(1 / 120);
@@ -287,7 +372,7 @@ void main() {
       'fast projectiles cannot tunnel through enemies during a long frame',
       () {
         final game = emptyGame();
-        final enemy = Enemy(x: 120, kind: EnemyType.infantry);
+        final enemy = Enemy(x: 120, kind: EnemyType.infantry)..activateCombat();
         game.enemies.add(enemy);
         game.projectiles.add(
           Projectile(x: 105, y: 198, vx: GameConfig.bulletSpeed, vy: 0),
@@ -562,6 +647,7 @@ void main() {
     test('boss rejects armored hits, has three attacks and phase two', () {
       final game = emptyGame();
       game.boss.active = true;
+      game.cameraX = GameConfig.bossArenaStart;
       game.player.x = GameConfig.bossArenaStart + 60;
       game.projectiles.add(bulletAt(game.boss));
       game.update(1 / 120);
@@ -591,6 +677,7 @@ void main() {
       () {
         final game = emptyGame();
         game.boss.active = true;
+        game.cameraX = GameConfig.bossArenaStart;
         game.boss.telegraph = false;
         game.boss.vulnerable = true;
         game.boss.timer = 1;
