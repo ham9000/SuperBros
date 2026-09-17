@@ -70,6 +70,15 @@ abstract final class GameConfig {
   static const double encounterSpacing = 277;
   static const double enemyAwareness = 255;
   static const double enemySpeed = 23;
+  static const double enemyProneWidth = 34;
+  static const double enemyProneHeight = 12;
+  static const double enemyLoweringTime = 0.65;
+  static const double enemyDecisionInterval = 2;
+  static const double enemyProneChance = 0.08;
+  static const double enemyInitialProneChance = 0.2;
+  static const double enemyGrenadeChance = 0.18;
+  static const double enemyGrenadeCooldown = 6;
+  static const double enemyGrenadeTelegraph = 1.1;
   static const double cameraLerpSpeed = 7;
   static const double cameraFacingFraction = 1 / 3;
   static const double projectileCullPadding = 16;

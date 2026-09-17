@@ -476,28 +476,32 @@ abstract final class PixelArt {
         );
       }
       final scale = enemy.entranceScale;
-      _entitySprite(
-        c,
-        id,
-        enemy.x,
-        enemy.y,
-        enemy.width * scale,
-        enemy.height * scale,
-        s.elapsed,
-        facing: enemy.facing,
-        moving:
-            enemy.lifecycle == EnemyLifecycle.entering ||
-            enemy.mode == EnemyMode.patrol,
-        firing: enemy.combatEnabled && enemy.mode == EnemyMode.attack,
-        airborne:
-            enemy.lifecycle == EnemyLifecycle.entering &&
-            enemy.entranceType == EntranceType.dropFromAbove,
-      );
+      if (enemy.stance != EnemyStance.standing) {
+        _proneSoldier(c, enemy, s.elapsed);
+      } else {
+        _entitySprite(
+          c,
+          id,
+          enemy.x,
+          enemy.y,
+          enemy.width * scale,
+          enemy.height * scale,
+          s.elapsed,
+          facing: enemy.facing,
+          moving:
+              enemy.lifecycle == EnemyLifecycle.entering ||
+              enemy.mode == EnemyMode.patrol,
+          firing: enemy.combatEnabled && enemy.mode == EnemyMode.attack,
+          airborne:
+              enemy.lifecycle == EnemyLifecycle.entering &&
+              enemy.entranceType == EntranceType.dropFromAbove,
+        );
+      }
       c.restore();
       if (enemy.combatEnabled && enemy.mode == EnemyMode.alert) {
         _label(
           c,
-          '!',
+          enemy.throwingGrenade ? 'GRENADE!' : '!',
           enemy.x + enemy.width / 2,
           enemy.y - 12,
           gold,
@@ -1002,6 +1006,41 @@ abstract final class PixelArt {
       _r(c, 27, 14, 2, 5, gold);
     }
     if (firing) _muzzle(c, 29, 17, time);
+    c.restore();
+  }
+
+  static void _proneSoldier(Canvas c, Enemy enemy, double time) {
+    c.save();
+    c.translate(enemy.facing > 0 ? enemy.x : enemy.x + enemy.width, enemy.y);
+    c.scale(enemy.facing.toDouble(), 1);
+    final t =
+        enemy.stance == EnemyStance.prone
+            ? 1.0
+            : (enemy.loweringTime / GameConfig.enemyLoweringTime).clamp(
+              0.0,
+              1.0,
+            );
+    final headX = 6 + 15 * t;
+    final h = enemy.height;
+    _r(c, 0, h - 4, 10 + 5 * t, 4, ink);
+    _r(c, 3, h - 5, 8 + 5 * t, 3, rust);
+    _plate(c, 8, 7, headX - 1, h - 7, rust);
+    _r(c, 10, 8, headX - 5, 2, orange);
+    _plate(c, headX, 1, 9, 8, gold);
+    _r(c, headX - 1, 0, 11, 4, red);
+    _r(c, headX + 5, 4, 4, 2, mint);
+    _r(c, headX - 1, 8, 9, 3, orange);
+    _r(c, headX + 4, 5, enemy.width - headX - 4, 3, ink);
+    _r(c, headX + 5, 5, enemy.width - headX - 5, 1, steel);
+    if (enemy.kind == EnemyType.shield) {
+      _plate(c, enemy.width - 9, h - 6, 8, 6, navy);
+      _r(c, enemy.width - 7, h - 5, 4, 2, mint);
+    }
+    if (enemy.throwingGrenade) {
+      _r(c, headX - 3, 0, 4, 4, gold);
+    } else if (enemy.mode == EnemyMode.attack && enemy.combatEnabled) {
+      _muzzle(c, enemy.width.round(), 5, time);
+    }
     c.restore();
   }
 

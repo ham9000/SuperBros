@@ -11,6 +11,8 @@ enum EnemyType { infantry, shield, turret }
 
 enum EnemyMode { patrol, alert, attack, hurt, defeated }
 
+enum EnemyStance { standing, lowering, prone }
+
 enum PickupType { rapid, launcher, health, grenades }
 
 class Bounds {
@@ -59,6 +61,7 @@ class Enemy extends Entity {
     this.id = '',
     this.spawn = const EnemySpawnDefinition(),
     this.entrance,
+    int aiSeed = GameConfig.encounterSeed,
   }) : hp = switch (kind) {
          EnemyType.infantry => GameConfig.infantryHealth,
          EnemyType.shield => GameConfig.shieldHealth,
@@ -66,7 +69,13 @@ class Enemy extends Entity {
        },
        originX = x,
        patrolX = x,
-       super(x, y ?? GameConfig.groundY - 28, 22, 28);
+       super(x, y ?? GameConfig.groundY - 28, 22, 28) {
+    randomState = (aiSeed + x.round() * 31) % 2147483646 + 1;
+    startsProne =
+        kind != EnemyType.turret &&
+        (spawn.startsProne ??
+            nextDecision() < GameConfig.enemyInitialProneChance);
+  }
   final EnemyType kind;
   final String id;
   final EnemySpawnDefinition spawn;
@@ -77,6 +86,43 @@ class Enemy extends Entity {
   EnemyMode mode = EnemyMode.patrol;
   int facing = -1;
   double timer = 0, contactCooldown = 0;
+  late int randomState;
+  late bool startsProne;
+  EnemyStance stance = EnemyStance.standing;
+  double loweringTime = 0, decisionTimer = GameConfig.enemyDecisionInterval;
+  double grenadeCooldown = GameConfig.enemyGrenadeCooldown;
+  bool throwingGrenade = false;
+  double get muzzleX =>
+      centerX + facing * (stance == EnemyStance.standing ? 14 : width / 2);
+  double get muzzleY => y + (stance == EnemyStance.prone ? 5 : 7);
+
+  // Explicit integer state is portable to the web and survives checkpoint copies.
+  double nextDecision() {
+    randomState = randomState * 48271 % 2147483647;
+    return randomState / 2147483647;
+  }
+
+  void lowerToProne() {
+    if (kind == EnemyType.turret || stance != EnemyStance.standing) return;
+    stance = EnemyStance.lowering;
+    loweringTime = 0;
+    throwingGrenade = false;
+  }
+
+  void updateStance(double dt) {
+    if (stance != EnemyStance.lowering) return;
+    loweringTime += dt;
+    final t = (loweringTime / GameConfig.enemyLoweringTime).clamp(0.0, 1.0);
+    final bottom = y + height;
+    width = 22 + (GameConfig.enemyProneWidth - 22) * t;
+    height = 28 + (GameConfig.enemyProneHeight - 28) * t;
+    y = bottom - height;
+    if (t >= 1) {
+      stance = EnemyStance.prone;
+      mode = EnemyMode.patrol;
+    }
+  }
+
   bool get alive => hp > 0;
   EnemyLifecycle lifecycle = EnemyLifecycle.dormant;
   bool entranceSuspended = false;
@@ -180,6 +226,7 @@ class Enemy extends Entity {
           direction > 0
               ? context.cameraX + context.viewportWidth - 64
               : context.cameraX + 42;
+      targetX -= direction * spawn.landingOffset;
     }
     if (!_safeTarget(context)) return false;
     startX = targetX;
@@ -240,7 +287,9 @@ class Enemy extends Entity {
                 ? -entranceFacing
                 : entranceFacing;
         targetX =
-            context.cameraX + (direction > 0 ? context.viewportWidth - 64 : 42);
+            context.cameraX +
+            (direction > 0 ? context.viewportWidth - 64 : 42) -
+            direction * spawn.landingOffset;
         startX =
             context.cameraX +
             (direction > 0 ? context.viewportWidth + 4 : -width - 4);
@@ -291,6 +340,11 @@ class Enemy extends Entity {
     mode = EnemyMode.patrol;
     patrolX = x;
     timer = 0;
+    throwingGrenade = false;
+    if (startsProne && stance == EnemyStance.standing) {
+      lowerToProne();
+      updateStance(GameConfig.enemyLoweringTime);
+    }
   }
 
   void defeat() {
@@ -298,6 +352,7 @@ class Enemy extends Entity {
     lifecycle = EnemyLifecycle.defeated;
     mode = EnemyMode.defeated;
     _damageable = _combatEnabled = false;
+    throwingGrenade = false;
   }
 
   Enemy copy() =>
@@ -305,6 +360,15 @@ class Enemy extends Entity {
         ..x = x
         ..patrolX = patrolX
         ..y = y
+        ..width = width
+        ..height = height
+        ..startsProne = startsProne
+        ..randomState = randomState
+        ..stance = stance
+        ..loweringTime = loweringTime
+        ..decisionTimer = decisionTimer
+        ..grenadeCooldown = grenadeCooldown
+        ..throwingGrenade = throwingGrenade
         ..hp = hp
         ..mode = mode
         ..facing = facing
@@ -337,11 +401,13 @@ class Projectile extends Entity {
     this.damage = GameConfig.bulletDamage,
     this.shockwave = false,
     this.allowOffscreen = false,
+    this.detonateOnImpact = true,
     double width = 6,
     double height = 3,
   }) : super(x, y, width, height);
   double vx, vy, life;
   final bool hostile, explosive, grenade, shockwave, allowOffscreen;
+  final bool detonateOnImpact;
   final int damage;
 }
 

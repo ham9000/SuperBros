@@ -54,6 +54,7 @@ class EnemySpawnDefinition {
     this.randomizeSpecial = false,
     this.entranceVulnerable = false,
     this.landingOffset = 0,
+    this.startsProne = false,
   });
   final Set<EntranceType> allowed;
   final Map<EntranceType, int> weights;
@@ -62,6 +63,7 @@ class EnemySpawnDefinition {
   final SpawnTrigger trigger;
   final double? triggerX;
   final double landingOffset;
+  final bool? startsProne;
   final String? prerequisite;
   final int wave;
   final bool scripted, boss, tutorial, randomizeSpecial, entranceVulnerable;

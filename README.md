@@ -35,6 +35,11 @@ platforms, six captives, two checkpoints, a usable vehicle, and a phased boss
 with cannon bursts, arcing bombs, and jumpable ground shockwaves. Shields can
 be flanked, meleed, or blasted. Special weapons switch back to the unlimited
 sidearm when empty. Shoot restraints or interact to rescue crew.
+Several encounters arrive in pairs. Infantry and shield troops may start prone
+or visibly lower themselves before firing along the ground; prone troops stay
+put. Both stances occasionally telegraph a grenade throw before its bouncing,
+fused blast. Stance chances, decision timing, and grenade cooldowns are tuned in
+`GameConfig`; mission seeds and checkpoint snapshots preserve their decisions.
 
 Death opens the results screen. **Retry** restores the latest checkpoint
 snapshot (including score and rescue progress); **Restart Mission** in pause

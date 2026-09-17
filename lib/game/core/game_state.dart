@@ -95,15 +95,16 @@ class GameState {
         forced: authored,
         tutorial: i == 0,
         scripted: i == 25,
+        startsProne: i == 0 ? false : (i == 6 || i == 7 ? true : null),
       );
       final members = <(EnemyType, EnemySpawnDefinition)>[(kind, spawn)];
-      if (i == 4) {
+      if (i == 4 || i == 6 || i == 9 || i == 16 || i == 21) {
         members.add((
           EnemyType.infantry,
           EnemySpawnDefinition(
             marker: marker,
             forced: authored,
-            landingOffset: 28,
+            landingOffset: 40,
           ),
         ));
       }
@@ -123,6 +124,7 @@ class GameState {
             id: 'encounter-$i-$member',
             spawn: members[member].$2,
             entrance: choice,
+            aiSeed: encounterSeed + member * 997,
           ),
         );
       }
@@ -451,7 +453,30 @@ class GameState {
           GameConfig.entranceWarning,
         );
       }
-      if (enemy.shouldActivate(context)) enemy.beginEntrance(context);
+      if (enemy.shouldActivate(context)) {
+        final group =
+            enemy.entrance == null
+                ? [enemy]
+                : enemies
+                    .where(
+                      (e) =>
+                          e.alive &&
+                          e.lifecycle == EnemyLifecycle.dormant &&
+                          identical(e.entrance, enemy.entrance),
+                    )
+                    .toList();
+        // Reserve the entire group only once every destination is readable.
+        if (context.enteringCount + group.length <=
+                GameConfig.maxConcurrentEntrances &&
+            group.every(
+              (e) =>
+                  e.shouldActivate(context) && e.copy().beginEntrance(context),
+            )) {
+          for (final member in group) {
+            member.beginEntrance(context);
+          }
+        }
+      }
       if (enemy.lifecycle == EnemyLifecycle.entering) {
         enemy.updateEntrance(dt, context);
         if (enemy.lifecycle == EnemyLifecycle.active && enemy.id.isNotEmpty) {
@@ -465,6 +490,13 @@ class GameState {
       if (!enemy.bounds.overlaps(cameraBounds)) {
         // Reentry always gets a fresh telegraph, never a queued offscreen shot.
         enemy.mode = EnemyMode.patrol;
+        enemy.throwingGrenade = false;
+        continue;
+      }
+      enemy.grenadeCooldown = math.max(0, enemy.grenadeCooldown - dt);
+      enemy.decisionTimer -= dt;
+      if (enemy.stance == EnemyStance.lowering) {
+        enemy.updateStance(dt);
         continue;
       }
       enemy.timer -= dt;
@@ -475,15 +507,31 @@ class GameState {
       }
       switch (enemy.mode) {
         case EnemyMode.patrol:
-          if (enemy.kind != EnemyType.turret) {
+          if (enemy.kind != EnemyType.turret &&
+              enemy.stance == EnemyStance.standing &&
+              enemy.decisionTimer <= 0) {
+            enemy.decisionTimer = GameConfig.enemyDecisionInterval;
+            if (enemy.nextDecision() < GameConfig.enemyProneChance) {
+              enemy.lowerToProne();
+              continue;
+            }
+          }
+          if (enemy.kind != EnemyType.turret &&
+              enemy.stance == EnemyStance.standing) {
             enemy.x += enemy.facing * GameConfig.enemySpeed * dt;
             if ((enemy.x - enemy.patrolX).abs() > 45) enemy.facing *= -1;
           }
           if (dx.abs() < GameConfig.enemyAwareness) {
             enemy.facing = dx < 0 ? -1 : 1;
             enemy.mode = EnemyMode.alert;
+            enemy.throwingGrenade =
+                enemy.kind != EnemyType.turret &&
+                enemy.grenadeCooldown <= 0 &&
+                enemy.nextDecision() < GameConfig.enemyGrenadeChance;
             enemy.timer =
-                enemy.kind == EnemyType.turret
+                enemy.throwingGrenade
+                    ? GameConfig.enemyGrenadeTelegraph
+                    : enemy.kind == EnemyType.turret
                     ? GameConfig.turretTelegraph
                     : GameConfig.enemyTelegraph;
           }
@@ -491,7 +539,12 @@ class GameState {
           if (enemy.timer <= 0) {
             enemy.mode = EnemyMode.attack;
             enemy.timer = GameConfig.enemyAttackTime;
-            _enemyShoot(enemy);
+            if (enemy.throwingGrenade) {
+              _enemyThrowGrenade(enemy);
+            } else {
+              _enemyShoot(enemy);
+            }
+            enemy.throwingGrenade = false;
           }
         case EnemyMode.attack:
           if (enemy.timer <= 0) {
@@ -511,8 +564,8 @@ class GameState {
     for (var i = 0; i < count; i++) {
       projectiles.add(
         Projectile(
-          x: enemy.centerX + enemy.facing * 14,
-          y: enemy.y + 7,
+          x: enemy.muzzleX,
+          y: enemy.muzzleY,
           vx: enemy.facing * GameConfig.hostileBulletSpeed,
           vy: count == 3 ? (i - 1) * 26.0 : 0,
           hostile: true,
@@ -521,7 +574,27 @@ class GameState {
         ),
       );
     }
-    effects.add(Effect(enemy.centerX, enemy.y + 7, 'enemyMuzzle', 0.15));
+    effects.add(Effect(enemy.muzzleX, enemy.muzzleY, 'enemyMuzzle', 0.15));
+  }
+
+  void _enemyThrowGrenade(Enemy enemy) {
+    enemy.grenadeCooldown = GameConfig.enemyGrenadeCooldown;
+    projectiles.add(
+      Projectile(
+        x: enemy.muzzleX,
+        y: enemy.muzzleY,
+        vx: enemy.facing * GameConfig.grenadeSpeed,
+        vy: GameConfig.grenadeLaunchSpeed,
+        hostile: true,
+        explosive: true,
+        grenade: true,
+        life: GameConfig.grenadeFuse,
+        width: 7,
+        height: 7,
+        detonateOnImpact: false,
+      ),
+    );
+    audio.emit(AudioEvent.grenade);
   }
 
   void _hitEnemy(Enemy enemy, int damage, {bool bypassShield = false}) {
@@ -536,6 +609,7 @@ class GameState {
     enemy.hp = math.max(0, enemy.hp - damage);
     enemy.mode = enemy.alive ? EnemyMode.hurt : EnemyMode.defeated;
     enemy.timer = GameConfig.enemyHurtTime;
+    enemy.throwingGrenade = false;
     effects.add(Effect(enemy.centerX, enemy.centerY, 'hit'));
     if (!enemy.alive) {
       enemy.defeat();
@@ -568,7 +642,7 @@ class GameState {
       var hit = false;
       if (shot.hostile) {
         final target = player.inVehicle ? vehicle.bounds : player.bounds;
-        if (shot.bounds.overlaps(target)) {
+        if (shot.detonateOnImpact && shot.bounds.overlaps(target)) {
           if (!shot.explosive) damagePlayer(shot.damage);
           hit = true;
         }
