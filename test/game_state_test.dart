@@ -393,15 +393,22 @@ void main() {
       };
       for (final kind in EnemyType.values) {
         final game = emptyGame();
-        // Keep the player out of aggro range so enemy AI (facing/mode
-        // changes) cannot interfere with this pure durability check.
-        game.player.x = 5000;
-        final enemy = Enemy(x: 120, kind: kind);
+        final enemy = Enemy(x: 120, kind: kind)..activateCombat();
         game.enemies.add(enemy);
+        // Keep the player close enough to stay onscreen so shots are not
+        // camera-culled; this is a pure durability check against the
+        // sidearm, independent of enemy AI facing/aggro behavior.
+        game.player.x = enemy.x + 60;
         final startingHp = enemy.hp;
         final maxShots = (startingHp / GameConfig.bulletDamage).ceil() + 2;
         var shotsToDefeat = 0;
         while (enemy.alive && shotsToDefeat < maxShots) {
+          if (kind == EnemyType.shield) {
+            // Force the shield open so a fair, unblocked shot lands each
+            // time; this isolates durability from the shield-facing rule.
+            enemy.mode = EnemyMode.attack;
+            enemy.timer = 1;
+          }
           game.projectiles.add(bulletAt(enemy));
           game.update(1 / 120);
           shotsToDefeat++;
@@ -417,7 +424,7 @@ void main() {
       'reengage once the player returns',
       () {
         final game = emptyGame();
-        final enemy = Enemy(x: 400, kind: EnemyType.infantry);
+        final enemy = Enemy(x: 400, kind: EnemyType.infantry)..activateCombat();
         game.enemies.add(enemy);
         // Damage the enemy first so we can confirm the remaining hp survives.
         game.projectiles.add(bulletAt(enemy));

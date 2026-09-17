@@ -22,7 +22,11 @@ void main() {
       final highShot = bulletAt(enemy)..y = GameConfig.groundY - 23;
       game.projectiles.add(highShot);
       advance(game, GameConfig.enemyTelegraph + 0.05);
-      expect(enemy.hp, kind == EnemyType.shield ? 50 : 30);
+      final startingHp =
+          kind == EnemyType.shield
+              ? GameConfig.shieldHealth
+              : GameConfig.infantryHealth;
+      expect(enemy.hp, startingHp);
       expect(enemy.x, x);
       final shot = game.projectiles.firstWhere((p) => p.hostile);
       expect(shot.y, enemy.muzzleY);
@@ -30,7 +34,7 @@ void main() {
       enemy.facing = 1;
       game.projectiles.add(bulletAt(enemy));
       advance(game, 0.01);
-      expect(enemy.hp, kind == EnemyType.shield ? 40 : 20);
+      expect(enemy.hp, startingHp - GameConfig.bulletDamage);
     });
   }
 

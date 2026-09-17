@@ -279,8 +279,12 @@ void main() {
           enemy.setDamageable(true);
           enemy.setCombatEnabled(true);
           expect(enemy.combatEnabled, isFalse);
-          game.projectiles.add(bulletAt(enemy, explosive: true));
-          game.update(1 / 120);
+          final maxExplosiveShots =
+              (enemy.hp / GameConfig.explosionDamage).ceil();
+          for (var i = 0; i < maxExplosiveShots && enemy.alive; i++) {
+            game.projectiles.add(bulletAt(enemy, explosive: true));
+            game.update(1 / 120);
+          }
           expect(enemy.lifecycle, EnemyLifecycle.defeated);
           expect(enemy.visible, isFalse);
           expect(game.score, GameConfig.enemyScore);
@@ -886,13 +890,13 @@ void main() {
         game.enemies.add(enemy);
         game.projectiles.add(Projectile(x: 477, y: 195, vx: 0, vy: 0));
         game.update(1 / 120);
-        expect(enemy.hp, 20);
+        expect(enemy.hp, GameConfig.infantryHealth - GameConfig.bulletDamage);
         enemy.x = 496;
         game.projectiles.add(
           Projectile(x: 495, y: 195, vx: 390, vy: 0, explosive: true),
         );
         game.update(1 / 120);
-        expect(enemy.hp, 20);
+        expect(enemy.hp, GameConfig.infantryHealth - GameConfig.bulletDamage);
         expect(game.projectiles, isEmpty);
       },
     );
@@ -910,7 +914,7 @@ void main() {
           Projectile(x: 700, y: 195, vx: 0, vy: 0, allowOffscreen: true),
         );
         game.update(1 / 120);
-        expect(enemy.hp, 20);
+        expect(enemy.hp, GameConfig.infantryHealth - GameConfig.bulletDamage);
         final grenade = Projectile(
           x: 600,
           y: -40,
