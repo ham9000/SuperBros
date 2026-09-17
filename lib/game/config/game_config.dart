@@ -18,7 +18,8 @@ abstract final class GameConfig {
   static const int maxHealth = 100;
   static const int startingGrenades = 4;
   static const double invulnerability = 0.85;
-  static const double sidearmCooldown = 0.23;
+  // Touch-friendly held fire stays deliberate; rapid fire requires finite ammo.
+  static const double sidearmCooldown = 0.36;
   static const double rapidCooldown = 0.09;
   static const double launcherCooldown = 0.6;
   static const double meleeCooldown = 0.38;
@@ -70,6 +71,15 @@ abstract final class GameConfig {
   static const double enemyAwareness = 255;
   static const double enemySpeed = 23;
   static const double cameraLerpSpeed = 7;
+  static const double cameraFacingFraction = 1 / 3;
+  static const double projectileCullPadding = 16;
+  static const int encounterSeed = 7319;
+  static const int maxConcurrentEntrances = 2;
+  static const double entranceWarning = 0.65;
+  static const double entranceMotion = 0.8;
+  static const double entranceRecovery = 0.65;
+  static const double entranceSafeGap = 88;
+  static const double rearEntranceCap = 0.03;
   static const double maxFrameTime = 0.1;
   static const double simulationStep = 1 / 120;
 }
