@@ -280,7 +280,7 @@ void main() {
       game.player.weapon = WeaponType.rapid;
       game.player.ammo = 5;
       tap(game, Command.fire);
-      expect(enemy.hp, 50 - GameConfig.meleeDamage);
+      expect(enemy.hp, GameConfig.shieldHealth - GameConfig.meleeDamage);
       expect(game.player.ammo, 5);
       expect(game.projectiles.where((p) => !p.hostile), isEmpty);
     });
@@ -311,7 +311,7 @@ void main() {
       game.enemies.add(enemy);
       game.projectiles.add(bulletAt(enemy, explosive: true));
       game.update(1 / 60);
-      expect(enemy.hp, 6);
+      expect(enemy.hp, GameConfig.shieldHealth - GameConfig.explosionDamage);
       game.projectiles.add(bulletAt(enemy, explosive: true));
       game.update(1 / 60);
       expect(enemy.alive, isFalse);
@@ -328,12 +328,12 @@ void main() {
       game.enemies.add(enemy);
       game.projectiles.add(bulletAt(enemy));
       game.update(1 / 120);
-      expect(enemy.hp, 50);
+      expect(enemy.hp, GameConfig.shieldHealth);
       enemy.mode = EnemyMode.attack;
       enemy.timer = 0.2;
       game.projectiles.add(bulletAt(enemy));
       game.update(1 / 120);
-      expect(enemy.hp, 40);
+      expect(enemy.hp, GameConfig.shieldHealth - GameConfig.bulletDamage);
     });
 
     test('all enemy types telegraph before firing and recover from hurt', () {
@@ -379,6 +379,74 @@ void main() {
         );
         game.update(0.1);
         expect(enemy.hp, GameConfig.infantryHealth - GameConfig.bulletDamage);
+      },
+    );
+
+    test('regular enemies now take more than a couple of sidearm shots', () {
+      // Fixed pre-tuning HP values from the issue (not current GameConfig
+      // values); kept as plain literals so a future rebalance can't make
+      // this regression check drift along with GameConfig.
+      const legacyBaselineHp = {
+        EnemyType.infantry: 30,
+        EnemyType.shield: 50,
+        EnemyType.turret: 60,
+      };
+      for (final kind in EnemyType.values) {
+        final game = emptyGame();
+        final enemy = Enemy(x: 120, kind: kind)..activateCombat();
+        game.enemies.add(enemy);
+        // Keep the player close enough to stay onscreen so shots are not
+        // camera-culled; this is a pure durability check against the
+        // sidearm, independent of enemy AI facing/aggro behavior.
+        game.player.x = enemy.x + 60;
+        final startingHp = enemy.hp;
+        final maxShots = (startingHp / GameConfig.bulletDamage).ceil() + 2;
+        var shotsToDefeat = 0;
+        while (enemy.alive && shotsToDefeat < maxShots) {
+          if (kind == EnemyType.shield) {
+            // Force the shield open so a fair, unblocked shot lands each
+            // time; this isolates durability from the shield-facing rule.
+            enemy.mode = EnemyMode.attack;
+            enemy.timer = 1;
+          }
+          game.projectiles.add(bulletAt(enemy));
+          game.update(1 / 120);
+          shotsToDefeat++;
+        }
+        expect(enemy.alive, isFalse);
+        expect(shotsToDefeat, greaterThan(2));
+        expect(startingHp, greaterThan(legacyBaselineHp[kind]!));
+      }
+    });
+
+    test(
+      'enemies stay alive with their hp and position when far off-screen and '
+      'reengage once the player returns',
+      () {
+        final game = emptyGame();
+        final enemy = Enemy(x: 400, kind: EnemyType.infantry)..activateCombat();
+        game.enemies.add(enemy);
+        // Damage the enemy first so we can confirm the remaining hp survives.
+        game.projectiles.add(bulletAt(enemy));
+        game.update(1 / 120);
+        final woundedHp = enemy.hp;
+        expect(woundedHp, lessThan(GameConfig.infantryHealth));
+
+        // Move the player far away, well outside the enemy-update window.
+        game.player.x = enemy.x + GameConfig.viewportWidth + 500;
+        advance(game, 2);
+
+        expect(enemy.alive, isTrue);
+        expect(enemy.mode, isNot(EnemyMode.defeated));
+        expect(enemy.hp, woundedHp);
+        expect(enemy.x, closeTo(400, 1));
+
+        // Bring the player back within range but not overlapping, so a
+        // fired shot survives long enough to observe.
+        game.player.x = enemy.x - 60;
+        advance(game, 1.5);
+        expect(enemy.mode, isNot(EnemyMode.patrol));
+        expect(game.player.health, lessThan(GameConfig.maxHealth));
       },
     );
   });
