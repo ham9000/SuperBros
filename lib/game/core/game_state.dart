@@ -13,14 +13,24 @@ enum MissionStatus { playing, paused, gameOver, victory }
 
 /// Deterministic mission rules. Rendering, device input, and sound stay outside.
 class GameState {
-  GameState({GameInput? input, AudioBus? audio})
-    : input = input ?? GameInput(),
-      audio = audio ?? AudioBus() {
+  GameState({
+    GameInput? input,
+    AudioBus? audio,
+    this.encounterSeed = GameConfig.encounterSeed,
+    this.inspectEncounters = false,
+    this.cameraFacingFraction = GameConfig.cameraFacingFraction,
+  }) : input = input ?? GameInput(),
+       audio = audio ?? AudioBus() {
     restart();
   }
 
   final GameInput input;
   final AudioBus audio;
+  final int encounterSeed;
+  final bool inspectEncounters;
+  final double cameraFacingFraction;
+  int encounterWave = 0;
+  final Set<String> completedEntrances = {};
   MissionStatus status = MissionStatus.playing;
   late PlayerState player;
   final List<Enemy> enemies = [];
@@ -57,9 +67,67 @@ class GameState {
     prisoners.clear();
     props.clear();
     platforms.clear();
+    completedEntrances.clear();
+    encounterWave = 0;
+    final selector = EntranceSelector(encounterSeed);
     for (var i = 0; i < GameConfig.encounterCount; i++) {
       final x = 420.0 + i * GameConfig.encounterSpacing;
-      enemies.add(Enemy(x: x, kind: EnemyType.values[i % 3]));
+      final kind = EnemyType.values[i % 3];
+      final authored = switch (i) {
+        3 => EntranceType.dropFromAbove,
+        4 => EntranceType.doorway,
+        6 => EntranceType.trench,
+        7 => EntranceType.background,
+        9 => EntranceType.vehicle,
+        25 => EntranceType.rearAmbush,
+        _ => null,
+      };
+      final marker = EntranceMarker(
+        id: 'harbor-$i',
+        x: x,
+        allowed:
+            kind == EnemyType.turret
+                ? const {EntranceType.screenEdge, EntranceType.doorway}
+                : const {...EntranceType.values},
+      );
+      final spawn = EnemySpawnDefinition(
+        marker: marker,
+        forced: authored,
+        tutorial: i == 0,
+        scripted: i == 25,
+        startsProne: i == 0 ? false : (i == 6 || i == 7 ? true : null),
+      );
+      final members = <(EnemyType, EnemySpawnDefinition)>[(kind, spawn)];
+      if (i == 4 || i == 6 || i == 9 || i == 16 || i == 21) {
+        members.add((
+          EnemyType.infantry,
+          EnemySpawnDefinition(
+            marker: marker,
+            forced: authored,
+            landingOffset: 40,
+          ),
+        ));
+      }
+      final choice = selector.chooseGroupEntrance(
+        members,
+        EnemySpawnContext(
+          playerX: player.centerX,
+          cameraX: 0,
+          firstEncounter: i == 0,
+        ),
+      );
+      for (var member = 0; member < members.length; member++) {
+        enemies.add(
+          Enemy(
+            x: x,
+            kind: members[member].$1,
+            id: 'encounter-$i-$member',
+            spawn: members[member].$2,
+            entrance: choice,
+            aiSeed: encounterSeed + member * 997,
+          ),
+        );
+      }
       if (i % 3 == 1) {
         platforms.add(Platform(x - 100, GameConfig.groundY - 56, 90));
       }
@@ -105,11 +173,12 @@ class GameState {
     score = saved.score;
     rescued = saved.rescued;
     elapsed = saved.elapsed;
-    for (var i = 0; i < enemies.length; i++) {
-      enemies[i].hp = saved.enemyHp[i];
-      enemies[i].x = saved.enemyX[i];
-      if (!enemies[i].alive) enemies[i].mode = EnemyMode.defeated;
-    }
+    enemies
+      ..clear()
+      ..addAll(saved.enemies.map((e) => e.copy()));
+    completedEntrances.addAll(saved.completedEntrances);
+    encounterWave = saved.encounterWave;
+    player.facing = saved.facing;
     for (var i = 0; i < pickups.length; i++) {
       pickups[i].collected = saved.pickups[i];
     }
@@ -122,10 +191,7 @@ class GameState {
     }
     vehicle.x = saved.vehicleX;
     vehicle.hp = saved.vehicleHp;
-    cameraX = (player.x - 150).clamp(
-      0.0,
-      GameConfig.worldWidth - GameConfig.viewportWidth,
-    );
+    cameraX = saved.cameraX;
     _announce('CHECKPOINT RESTORED • Back in the fight!', 3);
   }
 
@@ -152,6 +218,7 @@ class GameState {
     }
     effects.removeWhere((e) => e.time <= 0);
     _movePlayer(dt);
+    _updateCamera(dt);
     if (input.consume(Command.interact)) _interact();
     if (input.held(Command.fire) && player.fireCooldown <= 0) _fire();
     if (input.consume(Command.grenade)) _throwGrenade();
@@ -164,10 +231,21 @@ class GameState {
       if (prisoner.rescued) prisoner.rescueTime += dt;
     }
     _checkMilestones(dt);
-    final target = (player.centerX - GameConfig.viewportWidth * 0.38).clamp(
+    cameraX = cameraX.clamp(
       boss.active ? GameConfig.bossArenaStart : 0.0,
       GameConfig.worldWidth - GameConfig.viewportWidth,
     );
+  }
+
+  void _updateCamera(double dt) {
+    final fraction = cameraFacingFraction.clamp(0.2, 0.5);
+    final target = (player.centerX -
+            GameConfig.viewportWidth *
+                (player.facing > 0 ? fraction : 1 - fraction))
+        .clamp(
+          boss.active ? GameConfig.bossArenaStart : 0.0,
+          GameConfig.worldWidth - GameConfig.viewportWidth,
+        );
     cameraX +=
         (target - cameraX) * math.min(1, dt * GameConfig.cameraLerpSpeed);
     cameraX = cameraX.clamp(
@@ -279,7 +357,7 @@ class GameState {
     if (!player.inVehicle && !input.held(Command.up)) {
       for (final enemy in enemies) {
         final dx = enemy.centerX - player.centerX;
-        if (enemy.alive &&
+        if (enemy.damageable &&
             dx * player.facing >= -5 &&
             dx.abs() < GameConfig.meleeRange &&
             (enemy.centerY - player.centerY).abs() < 28) {
@@ -349,10 +427,78 @@ class GameState {
   }
 
   void _updateEnemies(double dt) {
+    // Skipped geometry waits for a readable return without monopolizing the
+    // entrance budget; selection and progress remain attached to that enemy.
     for (final enemy in enemies) {
-      if (!enemy.alive) continue;
+      if (enemy.lifecycle == EnemyLifecycle.entering &&
+          enemy.entrance?.marker != null &&
+          !_entranceInView(enemy)) {
+        enemy.entranceSuspended = true;
+      }
+    }
+    for (final enemy in enemies) {
+      if (!enemy.alive) {
+        enemy.defeat();
+        continue;
+      }
+      final context = spawnContext;
+      if (enemy.entranceSuspended) {
+        if (!_entranceInView(enemy) ||
+            context.enteringCount >= GameConfig.maxConcurrentEntrances) {
+          continue;
+        }
+        enemy.entranceSuspended = false;
+        enemy.entranceTime = math.min(
+          enemy.entranceTime,
+          GameConfig.entranceWarning,
+        );
+      }
+      if (enemy.shouldActivate(context)) {
+        final group =
+            enemy.entrance == null
+                ? [enemy]
+                : enemies
+                    .where(
+                      (e) =>
+                          e.alive &&
+                          e.lifecycle == EnemyLifecycle.dormant &&
+                          identical(e.entrance, enemy.entrance),
+                    )
+                    .toList();
+        // Reserve the entire group only once every destination is readable.
+        if (context.enteringCount + group.length <=
+                GameConfig.maxConcurrentEntrances &&
+            group.every(
+              (e) =>
+                  e.shouldActivate(context) && e.copy().beginEntrance(context),
+            )) {
+          for (final member in group) {
+            member.beginEntrance(context);
+          }
+        }
+      }
+      if (enemy.lifecycle == EnemyLifecycle.entering) {
+        enemy.updateEntrance(dt, context);
+        if (enemy.lifecycle == EnemyLifecycle.active && enemy.id.isNotEmpty) {
+          completedEntrances.add(enemy.id);
+        }
+        continue;
+      }
+      enemy.recovery = math.max(0, enemy.recovery - dt);
+      if (!enemy.combatEnabled) continue;
       final dx = player.centerX - enemy.centerX;
-      if (dx.abs() > GameConfig.viewportWidth + 80) continue;
+      if (!enemy.bounds.overlaps(cameraBounds)) {
+        // Reentry always gets a fresh telegraph, never a queued offscreen shot.
+        enemy.mode = EnemyMode.patrol;
+        enemy.throwingGrenade = false;
+        continue;
+      }
+      enemy.grenadeCooldown = math.max(0, enemy.grenadeCooldown - dt);
+      enemy.decisionTimer -= dt;
+      if (enemy.stance == EnemyStance.lowering) {
+        enemy.updateStance(dt);
+        continue;
+      }
       enemy.timer -= dt;
       enemy.contactCooldown -= dt;
       if (enemy.bounds.overlaps(player.bounds) && enemy.contactCooldown <= 0) {
@@ -361,15 +507,31 @@ class GameState {
       }
       switch (enemy.mode) {
         case EnemyMode.patrol:
-          if (enemy.kind != EnemyType.turret) {
+          if (enemy.kind != EnemyType.turret &&
+              enemy.stance == EnemyStance.standing &&
+              enemy.decisionTimer <= 0) {
+            enemy.decisionTimer = GameConfig.enemyDecisionInterval;
+            if (enemy.nextDecision() < GameConfig.enemyProneChance) {
+              enemy.lowerToProne();
+              continue;
+            }
+          }
+          if (enemy.kind != EnemyType.turret &&
+              enemy.stance == EnemyStance.standing) {
             enemy.x += enemy.facing * GameConfig.enemySpeed * dt;
-            if ((enemy.x - enemy.originX).abs() > 45) enemy.facing *= -1;
+            if ((enemy.x - enemy.patrolX).abs() > 45) enemy.facing *= -1;
           }
           if (dx.abs() < GameConfig.enemyAwareness) {
             enemy.facing = dx < 0 ? -1 : 1;
             enemy.mode = EnemyMode.alert;
+            enemy.throwingGrenade =
+                enemy.kind != EnemyType.turret &&
+                enemy.grenadeCooldown <= 0 &&
+                enemy.nextDecision() < GameConfig.enemyGrenadeChance;
             enemy.timer =
-                enemy.kind == EnemyType.turret
+                enemy.throwingGrenade
+                    ? GameConfig.enemyGrenadeTelegraph
+                    : enemy.kind == EnemyType.turret
                     ? GameConfig.turretTelegraph
                     : GameConfig.enemyTelegraph;
           }
@@ -377,7 +539,12 @@ class GameState {
           if (enemy.timer <= 0) {
             enemy.mode = EnemyMode.attack;
             enemy.timer = GameConfig.enemyAttackTime;
-            _enemyShoot(enemy);
+            if (enemy.throwingGrenade) {
+              _enemyThrowGrenade(enemy);
+            } else {
+              _enemyShoot(enemy);
+            }
+            enemy.throwingGrenade = false;
           }
         case EnemyMode.attack:
           if (enemy.timer <= 0) {
@@ -397,8 +564,8 @@ class GameState {
     for (var i = 0; i < count; i++) {
       projectiles.add(
         Projectile(
-          x: enemy.centerX + enemy.facing * 14,
-          y: enemy.y + 7,
+          x: enemy.muzzleX,
+          y: enemy.muzzleY,
           vx: enemy.facing * GameConfig.hostileBulletSpeed,
           vy: count == 3 ? (i - 1) * 26.0 : 0,
           hostile: true,
@@ -407,11 +574,31 @@ class GameState {
         ),
       );
     }
-    effects.add(Effect(enemy.centerX, enemy.y + 7, 'enemyMuzzle', 0.15));
+    effects.add(Effect(enemy.muzzleX, enemy.muzzleY, 'enemyMuzzle', 0.15));
+  }
+
+  void _enemyThrowGrenade(Enemy enemy) {
+    enemy.grenadeCooldown = GameConfig.enemyGrenadeCooldown;
+    projectiles.add(
+      Projectile(
+        x: enemy.muzzleX,
+        y: enemy.muzzleY,
+        vx: enemy.facing * GameConfig.grenadeSpeed,
+        vy: GameConfig.grenadeLaunchSpeed,
+        hostile: true,
+        explosive: true,
+        grenade: true,
+        life: GameConfig.grenadeFuse,
+        width: 7,
+        height: 7,
+        detonateOnImpact: false,
+      ),
+    );
+    audio.emit(AudioEvent.grenade);
   }
 
   void _hitEnemy(Enemy enemy, int damage, {bool bypassShield = false}) {
-    if (!enemy.alive) return;
+    if (!enemy.damageable) return;
     if (enemy.kind == EnemyType.shield &&
         !bypassShield &&
         enemy.mode != EnemyMode.attack &&
@@ -422,8 +609,10 @@ class GameState {
     enemy.hp = math.max(0, enemy.hp - damage);
     enemy.mode = enemy.alive ? EnemyMode.hurt : EnemyMode.defeated;
     enemy.timer = GameConfig.enemyHurtTime;
+    enemy.throwingGrenade = false;
     effects.add(Effect(enemy.centerX, enemy.centerY, 'hit'));
     if (!enemy.alive) {
+      enemy.defeat();
       score += GameConfig.enemyScore;
       effects.add(Effect(enemy.centerX, enemy.centerY, 'defeat', 0.5));
     }
@@ -433,10 +622,18 @@ class GameState {
     final expired = <Projectile>{};
     // Explosions can chain through props but do not mutate this collection.
     for (final shot in projectiles) {
+      if (_cullFriendly(shot)) {
+        expired.add(shot);
+        continue;
+      }
       shot.life -= dt;
       if (shot.grenade) shot.vy += GameConfig.gravity * dt * 0.65;
       shot.x += shot.vx * dt;
       shot.y += shot.vy * dt;
+      if (_cullFriendly(shot)) {
+        expired.add(shot);
+        continue;
+      }
       if (shot.grenade && shot.y + shot.height >= GameConfig.groundY) {
         shot.y = GameConfig.groundY - shot.height;
         shot.vy = -shot.vy.abs() * 0.35;
@@ -445,13 +642,13 @@ class GameState {
       var hit = false;
       if (shot.hostile) {
         final target = player.inVehicle ? vehicle.bounds : player.bounds;
-        if (shot.bounds.overlaps(target)) {
+        if (shot.detonateOnImpact && shot.bounds.overlaps(target)) {
           if (!shot.explosive) damagePlayer(shot.damage);
           hit = true;
         }
       } else {
         for (final enemy in enemies) {
-          if (enemy.alive && shot.bounds.overlaps(enemy.bounds)) {
+          if (enemy.damageable && shot.bounds.overlaps(enemy.bounds)) {
             if (!shot.explosive) _hitEnemy(enemy, shot.damage);
             hit = true;
             break;
@@ -499,6 +696,78 @@ class GameState {
     projectiles.removeWhere(expired.contains);
   }
 
+  Bounds get cameraBounds =>
+      Bounds(cameraX, 0, GameConfig.viewportWidth, GameConfig.viewportHeight);
+
+  bool _entranceInView(Enemy enemy) =>
+      enemy.targetX >= cameraX + 24 &&
+      enemy.targetX + enemy.width <= cameraX + GameConfig.viewportWidth - 24;
+
+  bool _cullFriendly(Projectile shot) {
+    if (shot.hostile || shot.grenade || shot.allowOffscreen) return false;
+    const padding = GameConfig.projectileCullPadding;
+    return !shot.bounds.overlaps(
+      Bounds(
+        cameraX - padding,
+        -padding,
+        GameConfig.viewportWidth + padding * 2,
+        GameConfig.viewportHeight + padding * 2,
+      ),
+    );
+  }
+
+  EnemySpawnContext get spawnContext => EnemySpawnContext(
+    playerX: player.centerX,
+    cameraX: cameraX,
+    facing: player.facing,
+    enteringCount:
+        enemies
+            .where(
+              (e) =>
+                  e.lifecycle == EnemyLifecycle.entering &&
+                  !e.entranceSuspended,
+            )
+            .length,
+    forwardPressure:
+        projectiles
+                .where(
+                  (p) =>
+                      p.hostile &&
+                      (p.centerX - player.centerX) * player.facing > 0 &&
+                      p.bounds.overlaps(cameraBounds),
+                )
+                .length >=
+            3 ||
+        enemies.any(
+          (e) =>
+              e.combatEnabled &&
+              e.kind == EnemyType.turret &&
+              e.mode == EnemyMode.attack &&
+              (e.centerX - player.centerX) * player.facing > 0,
+        ),
+    completed: completedEntrances,
+    wave: encounterWave,
+  );
+
+  /// Optional inspection is stripped in release; normal play never logs.
+  List<String> get encounterInspection {
+    var debug = false;
+    assert(() {
+      debug = true;
+      return true;
+    }());
+    if (!debug || !inspectEncounters) return const [];
+    return enemies
+        .where((e) => (e.originX - player.x).abs() < 600)
+        .map(
+          (e) =>
+              '${e.id} ${e.lifecycle.name} ${e.entranceType.name} '
+              '${e.spawn.trigger.name} seed=${e.entrance?.seed ?? encounterSeed} '
+              'excluded=${e.entrance?.exclusions}',
+        )
+        .toList();
+  }
+
   void _explode(double x, double y, {bool hostile = false}) {
     effects.add(Effect(x, y, 'explosion', 0.55));
     shake = 4;
@@ -515,7 +784,7 @@ class GameState {
       return;
     }
     for (final enemy in enemies) {
-      if (enemy.alive && near(enemy)) {
+      if (enemy.damageable && near(enemy)) {
         _hitEnemy(enemy, GameConfig.explosionDamage, bypassShield: true);
       }
     }
@@ -802,18 +1071,23 @@ class _Checkpoint {
       score = game.score,
       rescued = game.rescued,
       elapsed = game.elapsed,
-      enemyHp = game.enemies.map((e) => e.hp).toList(),
-      enemyX = game.enemies.map((e) => e.x).toList(),
+      enemies = game.enemies.map((e) => e.copy()).toList(),
+      cameraX = game.cameraX,
+      facing = game.player.facing,
+      encounterWave = game.encounterWave,
+      completedEntrances = Set.of(game.completedEntrances),
       pickups = game.pickups.map((e) => e.collected).toList(),
       prisoners = game.prisoners.map((e) => e.rescued).toList(),
       restraints = game.prisoners.map((e) => e.restraints).toList(),
       props = game.props.map((e) => e.hp).toList(),
       vehicleX = game.vehicle.x,
       vehicleHp = game.vehicle.hp;
-  final double x, elapsed, vehicleX;
+  final double x, elapsed, vehicleX, cameraX;
+  final int facing, encounterWave;
+  final List<Enemy> enemies;
+  final Set<String> completedEntrances;
   final int health, ammo, grenades, score, rescued, vehicleHp;
   final WeaponType weapon;
-  final List<int> enemyHp, props, restraints;
-  final List<double> enemyX;
+  final List<int> props, restraints;
   final List<bool> pickups, prisoners;
 }

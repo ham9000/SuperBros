@@ -461,28 +461,47 @@ abstract final class PixelArt {
       }
     }
     for (final enemy in s.enemies) {
-      if (!enemy.alive || !_visible(enemy.x, enemy.width, s)) continue;
+      _entranceScenery(c, enemy, s);
+      if (!enemy.spriteVisible || !_visible(enemy.x, enemy.width, s)) continue;
       final id = switch (enemy.kind) {
         EnemyType.infantry => SpriteId.infantry,
         EnemyType.shield => SpriteId.shield,
         EnemyType.turret => SpriteId.turret,
       };
-      _entitySprite(
-        c,
-        id,
-        enemy.x,
-        enemy.y,
-        enemy.width,
-        enemy.height,
-        s.elapsed,
-        facing: enemy.facing,
-        moving: enemy.mode == EnemyMode.patrol,
-        firing: enemy.mode == EnemyMode.attack,
-      );
-      if (enemy.mode == EnemyMode.alert) {
+      c.save();
+      if (enemy.lifecycle == EnemyLifecycle.entering &&
+          enemy.entranceType == EntranceType.trench) {
+        c.clipRect(
+          Rect.fromLTWH(enemy.x - 4, 0, enemy.width + 8, GameConfig.groundY),
+        );
+      }
+      final scale = enemy.entranceScale;
+      if (enemy.stance != EnemyStance.standing) {
+        _proneSoldier(c, enemy, s.elapsed);
+      } else {
+        _entitySprite(
+          c,
+          id,
+          enemy.x,
+          enemy.y,
+          enemy.width * scale,
+          enemy.height * scale,
+          s.elapsed,
+          facing: enemy.facing,
+          moving:
+              enemy.lifecycle == EnemyLifecycle.entering ||
+              enemy.mode == EnemyMode.patrol,
+          firing: enemy.combatEnabled && enemy.mode == EnemyMode.attack,
+          airborne:
+              enemy.lifecycle == EnemyLifecycle.entering &&
+              enemy.entranceType == EntranceType.dropFromAbove,
+        );
+      }
+      c.restore();
+      if (enemy.combatEnabled && enemy.mode == EnemyMode.alert) {
         _label(
           c,
-          '!',
+          enemy.throwingGrenade ? 'GRENADE!' : '!',
           enemy.x + enemy.width / 2,
           enemy.y - 12,
           gold,
@@ -618,6 +637,18 @@ abstract final class PixelArt {
       if (_visible(effect.x - 70, 140, s)) _effect(c, effect, s.elapsed);
     }
     c.restore();
+    final inspection = s.encounterInspection;
+    for (var i = 0; i < math.min(3, inspection.length); i++) {
+      final line = inspection[i].toUpperCase();
+      _r(c, 4, 82 + i * 10, 472, 9, ink);
+      pixelText(
+        c,
+        line.substring(0, math.min(92, line.length)),
+        6,
+        83 + i * 10,
+        mint,
+      );
+    }
     if (s.calloutTime > 0 && s.callout.isNotEmpty) {
       final caption = s.callout.toUpperCase().replaceAll('•', '/');
       _label(c, caption, 240, 68, cream, centered: true);
@@ -627,6 +658,92 @@ abstract final class PixelArt {
 
   static bool _visible(double x, double width, GameState s) =>
       x + width > s.cameraX - 30 && x < s.cameraX + 510;
+
+  static void _entranceScenery(Canvas c, Enemy enemy, GameState s) {
+    final marker = enemy.entrance?.marker;
+    final entering = enemy.lifecycle == EnemyLifecycle.entering;
+    final x = marker?.x ?? enemy.targetX;
+    final y = marker?.y ?? enemy.targetY;
+    final type = enemy.entranceType;
+    final open =
+        entering
+            ? (enemy.entranceTime / GameConfig.entranceWarning).clamp(0.0, 1.0)
+            : enemy.lifecycle == EnemyLifecycle.dormant
+            ? 0.0
+            : 1.0;
+    if (marker != null && _visible(x - 28, 94, s)) {
+      switch (type) {
+        case EntranceType.doorway:
+          _plate(c, x - 25, y - 12, 42, 42, steel);
+          _r(c, x - 21, y - 8, 34, 36, ink);
+          _r(c, x - 21, y - 8, 34 * (1 - open), 36, deepTeal);
+          _r(c, x - 23, y - 11, 38, 3, open > 0 ? orange : rust);
+        case EntranceType.trench:
+          _r(c, x - 10, GameConfig.groundY - 2, 46, 7, ink);
+          _r(c, x - 13, GameConfig.groundY - 4, 16, 4, steel);
+          _r(c, x + 27, GameConfig.groundY - 4, 14, 4, steel);
+          for (var i = 0; i < 3; i++) {
+            _r(c, x + 5, GameConfig.groundY + i * 3, 18, 1, gold);
+          }
+        case EntranceType.background:
+          _plate(c, x - 18, y - 47, 48, 32, navy);
+          _r(c, x - 10, y - 42, 30, 27, ink);
+          for (var i = 0; i < 4; i++) {
+            _r(c, x - 4 - i * 2, y - 12 + i * 9, 17 + i * 4, 2, steel);
+          }
+        case EntranceType.vehicle:
+        case EntranceType.dropFromAbove:
+        case EntranceType.screenEdge:
+        case EntranceType.rearAmbush:
+          break;
+      }
+    }
+    if (!entering || enemy.entranceSuspended) return;
+    // The warning is camera-clamped independently of the hidden/offscreen sprite.
+    final warningX = (enemy.targetX + enemy.width / 2).clamp(
+      s.cameraX + 30,
+      s.cameraX + 450,
+    );
+    final pulse = (s.elapsed * 8).floor().isEven ? gold : orange;
+    _label(
+      c,
+      switch (type) {
+        EntranceType.screenEdge => 'INCOMING',
+        EntranceType.doorway => 'DOOR!',
+        EntranceType.trench => 'BELOW!',
+        EntranceType.dropFromAbove => 'ABOVE!',
+        EntranceType.background => 'APPROACH!',
+        EntranceType.vehicle => 'TRANSPORT!',
+        EntranceType.rearAmbush => 'BEHIND!',
+      },
+      warningX,
+      151,
+      pulse,
+      centered: true,
+    );
+    _arrowDown(c, warningX, 166 + math.sin(s.elapsed * 10) * 2, pulse);
+    _r(c, warningX - 15, GameConfig.groundY - 2, 30, 2, pulse);
+    if (type == EntranceType.dropFromAbove) {
+      final width = 10 + enemy.motionProgress * 20;
+      _r(c, warningX - width / 2, GameConfig.groundY - 4, width, 4, ink);
+    }
+    if (type == EntranceType.trench) {
+      _spark(c, x + 10, GameConfig.groundY - 7, s.elapsed * 3, gold);
+    }
+    if (type == EntranceType.vehicle) {
+      _entitySprite(
+        c,
+        SpriteId.vehicle,
+        enemy.transportX,
+        GameConfig.groundY - 35,
+        64,
+        35,
+        s.elapsed,
+        facing: -1,
+        moving: enemy.motionProgress < 0.65,
+      );
+    }
+  }
 
   static void _signs(Canvas c, GameState s) {
     const signs = <(double, String, String)>[
@@ -889,6 +1006,41 @@ abstract final class PixelArt {
       _r(c, 27, 14, 2, 5, gold);
     }
     if (firing) _muzzle(c, 29, 17, time);
+    c.restore();
+  }
+
+  static void _proneSoldier(Canvas c, Enemy enemy, double time) {
+    c.save();
+    c.translate(enemy.facing > 0 ? enemy.x : enemy.x + enemy.width, enemy.y);
+    c.scale(enemy.facing.toDouble(), 1);
+    final t =
+        enemy.stance == EnemyStance.prone
+            ? 1.0
+            : (enemy.loweringTime / GameConfig.enemyLoweringTime).clamp(
+              0.0,
+              1.0,
+            );
+    final headX = 6 + 15 * t;
+    final h = enemy.height;
+    _r(c, 0, h - 4, 10 + 5 * t, 4, ink);
+    _r(c, 3, h - 5, 8 + 5 * t, 3, rust);
+    _plate(c, 8, 7, headX - 1, h - 7, rust);
+    _r(c, 10, 8, headX - 5, 2, orange);
+    _plate(c, headX, 1, 9, 8, gold);
+    _r(c, headX - 1, 0, 11, 4, red);
+    _r(c, headX + 5, 4, 4, 2, mint);
+    _r(c, headX - 1, 8, 9, 3, orange);
+    _r(c, headX + 4, 5, enemy.width - headX - 4, 3, ink);
+    _r(c, headX + 5, 5, enemy.width - headX - 5, 1, steel);
+    if (enemy.kind == EnemyType.shield) {
+      _plate(c, enemy.width - 9, h - 6, 8, 6, navy);
+      _r(c, enemy.width - 7, h - 5, 4, 2, mint);
+    }
+    if (enemy.throwingGrenade) {
+      _r(c, headX - 3, 0, 4, 4, gold);
+    } else if (enemy.mode == EnemyMode.attack && enemy.combatEnabled) {
+      _muzzle(c, enemy.width.round(), 5, time);
+    }
     c.restore();
   }
 
