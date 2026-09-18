@@ -12,6 +12,7 @@ class SideScrollerGame extends FlameGame {
   SideScrollerGame({required this.session});
 
   final GameState session;
+  double _artElapsed = 0;
 
   @override
   Color backgroundColor() => PixelArt.ink;
@@ -19,6 +20,7 @@ class SideScrollerGame extends FlameGame {
   @override
   void update(double dt) {
     super.update(dt);
+    if (session.status != MissionStatus.paused) _artElapsed += dt;
     session.update(dt);
   }
 
@@ -39,7 +41,7 @@ class SideScrollerGame extends FlameGame {
       const Rect.fromLTWH(0, 0, width, height),
       doAntiAlias: false,
     );
-    PixelArt.renderScene(canvas, session);
+    PixelArt.renderScene(canvas, session, artTime: _artElapsed);
     canvas.restore();
   }
 }

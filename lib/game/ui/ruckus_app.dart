@@ -9,14 +9,15 @@ import '../core/game_state.dart';
 import '../core/progress_store.dart';
 import '../input/input_router.dart';
 import '../rendering/pixel_art.dart';
+import '../rendering/art_assets.dart';
 import '../side_scroller_game.dart';
 import 'menu_state.dart';
 
-const ink = Color(0xff102c3a);
-const cream = Color(0xffffedbf);
-const gold = Color(0xffffc857);
-const mint = Color(0xff67ddbd);
-const coral = Color(0xfff87754);
+const ink = Color(0xff1b2229);
+const cream = Color(0xffefe0c3);
+const gold = Color(0xffed9c45);
+const mint = Color(0xff8eb9c3);
+const coral = Color(0xffdc6034);
 
 class RuckusApp extends StatelessWidget {
   const RuckusApp({super.key, required this.progress});
@@ -25,7 +26,7 @@ class RuckusApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Operation Ruckus',
+      title: 'Juggernaut Assault',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -114,7 +115,11 @@ class RuckusShellState extends State<RuckusShell>
   void _start() {
     router?.clear();
     game?.pauseEngine();
-    session = GameState(audio: audio);
+    session = GameState(
+      audio: audio,
+      characterIndex: menu.character,
+      missionIndex: menu.level,
+    );
     game = SideScrollerGame(session: session!);
     router = InputRouter(session!.input);
     _gameWidget = GameWidget<SideScrollerGame>(
@@ -254,7 +259,7 @@ class RuckusShellState extends State<RuckusShell>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _eyebrow('A POCKET-SIZED REBELLION  /  VOL. 01'),
+        _eyebrow('JUGGERNAUT ASSAULT  /  UNITS HOLD THE LINE'),
         const SizedBox(height: 28),
         Expanded(
           child: Row(
@@ -266,7 +271,7 @@ class RuckusShellState extends State<RuckusShell>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'OPERATION',
+                      'JUGGERNAUT',
                       style: TextStyle(
                         color: cream,
                         fontSize: 38,
@@ -277,7 +282,7 @@ class RuckusShellState extends State<RuckusShell>
                     const FittedBox(
                       fit: BoxFit.scaleDown,
                       child: Text(
-                        'RUCKUS',
+                        'ASSAULT',
                         maxLines: 1,
                         style: TextStyle(
                           height: 1.1,
@@ -291,7 +296,7 @@ class RuckusShellState extends State<RuckusShell>
                     ),
                     const SizedBox(height: 12),
                     const Text(
-                      'SMALL HERO. MASSIVE PROPERTY DAMAGE.',
+                      'FIVE UNITS. ONE VERY LOUD ANSWER.',
                       style: TextStyle(
                         color: mint,
                         fontSize: 15,
@@ -330,13 +335,13 @@ class RuckusShellState extends State<RuckusShell>
                       ),
                     ),
                     const SizedBox(
-                      width: 240,
+                      width: 250,
                       height: 260,
                       child: _Portrait(variant: 0),
                     ),
                     Positioned(
                       bottom: 8,
-                      child: _tag('“THIS IS PROBABLY FINE.”', cream),
+                      child: _tag('“SAME FIGHT. HEAVIER ANSWERS.”', cream),
                     ),
                   ],
                 ),
@@ -346,8 +351,8 @@ class RuckusShellState extends State<RuckusShell>
         ),
         const SizedBox(height: 22),
         _footer(
-          'ORIGINAL ARCADE MISCHIEF',
-          'IRON HARBOR • SINGLE PLAYER • NO QUARTERS REQUIRED',
+          'ORIGINAL RETRO-COMIC ARCADE ASSAULT',
+          'SHIPPING YARD • TRANSIT HUB • NO QUARTERS REQUIRED',
         ),
       ],
     );
@@ -357,10 +362,10 @@ class RuckusShellState extends State<RuckusShell>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _eyebrow('OPERATION RUCKUS / FIELD OPERATIONS'),
+        _eyebrow('JUGGERNAUT ASSAULT / FIELD OPERATIONS'),
         const SizedBox(height: 24),
         const Text(
-          'MAKE SOME\nNOISE.',
+          'HOLD THE\nLINE.',
           style: TextStyle(
             fontSize: 66,
             height: 1,
@@ -407,12 +412,12 @@ class RuckusShellState extends State<RuckusShell>
                     _eyebrow('DISPATCH / 06:00'),
                     const SizedBox(height: 14),
                     const Text(
-                      'The Brass Bureau stole our harbor.\nAnd our lunch breaks.',
+                      'The Brass Bureau is choking the coast.\nAirports, harbors, everything.',
                       style: TextStyle(fontSize: 20, color: cream),
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'Get the crew out.\nMake an unreasonable entrance.',
+                      'Pick a Juggernaut.\nPunch through the blockade.',
                       style: TextStyle(fontSize: 16, color: mint),
                     ),
                     const SizedBox(height: 16),
@@ -427,7 +432,7 @@ class RuckusShellState extends State<RuckusShell>
           ],
         ),
         const Spacer(),
-        _footer('ESC / BACK', '100% ORIGINAL • 200% OVERCONFIDENT'),
+        _footer('ESC / BACK', 'ORIGINAL PIXEL ART • COMIC-ARCADE ATTITUDE'),
       ],
     );
   }
@@ -436,7 +441,7 @@ class RuckusShellState extends State<RuckusShell>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _header('PICK YOUR PROBLEM.', '01 / CREW SELECT'),
+        _header('CHOOSE A JUGGERNAUT.', '01 / UNIT SELECT'),
         const SizedBox(height: 20),
         Expanded(
           child: Row(
@@ -445,7 +450,9 @@ class RuckusShellState extends State<RuckusShell>
               final c = MenuState.characters[index];
               return Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(right: index == 3 ? 0 : 12),
+                  padding: EdgeInsets.only(
+                    right: index == MenuState.characters.length - 1 ? 0 : 10,
+                  ),
                   child: Semantics(
                     label:
                         '${c.name}${c.locked ? ', locked, future content' : ''}',
@@ -455,8 +462,8 @@ class RuckusShellState extends State<RuckusShell>
                         children: [
                           _eyebrow(
                             c.locked
-                                ? 'CLASSIFIED / 0${index + 1}'
-                                : 'READY / 01',
+                                ? 'CLASSIFIED / ${c.unit}'
+                                : 'READY / UNIT ${c.unit}',
                           ),
                           Expanded(
                             child: _Portrait(variant: index, locked: c.locked),
@@ -464,7 +471,7 @@ class RuckusShellState extends State<RuckusShell>
                           Text(
                             c.name.toUpperCase(),
                             style: TextStyle(
-                              fontSize: 34,
+                              fontSize: 20,
                               fontWeight: FontWeight.w900,
                               color: c.locked ? Colors.blueGrey : gold,
                             ),
@@ -472,15 +479,22 @@ class RuckusShellState extends State<RuckusShell>
                           Text(
                             c.role,
                             style: const TextStyle(fontSize: 11, color: mint),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 6),
                           Text(
                             c.description,
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: 11),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           OpButton(
-                            label: c.locked ? '🔒 COMING LATER' : 'SELECT ROOK',
+                            label:
+                                c.locked
+                                    ? '🔒 COMING LATER'
+                                    : 'SELECT ${c.unit}',
                             compact: true,
                             onPressed:
                                 c.locked
@@ -502,7 +516,7 @@ class RuckusShellState extends State<RuckusShell>
         const SizedBox(height: 16),
         _footer(
           MenuState.characters[menu.character].attributes,
-          'ENTER / SELECT ROOK',
+          'ENTER / SELECT ${MenuState.characters[menu.character].unit}',
         ),
       ],
     );
@@ -519,9 +533,17 @@ class RuckusShellState extends State<RuckusShell>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: List.generate(MenuState.levels.length, (index) {
               final l = MenuState.levels[index];
+              final icons = [
+                Icons.anchor,
+                Icons.flight_takeoff,
+                Icons.local_shipping,
+                Icons.forest,
+              ];
               return Expanded(
                 child: Padding(
-                  padding: EdgeInsets.only(right: index == 2 ? 0 : 16),
+                  padding: EdgeInsets.only(
+                    right: index == MenuState.levels.length - 1 ? 0 : 12,
+                  ),
                   child: _panel(
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -534,27 +556,31 @@ class RuckusShellState extends State<RuckusShell>
                               color: l.locked ? const Color(0xff263c48) : mint,
                               border: Border.all(color: ink, width: 3),
                             ),
-                            child: Center(
-                              child: Icon(
-                                [
-                                  Icons.anchor,
-                                  Icons.local_shipping,
-                                  Icons.forest,
-                                ][index],
-                                size: 78,
-                                color: l.locked ? Colors.blueGrey : ink,
-                              ),
-                            ),
+                            child:
+                                !l.locked && ArtAssets.ready
+                                    ? CustomPaint(
+                                      painter: _MissionPainter(index),
+                                      child: const SizedBox.expand(),
+                                    )
+                                    : Center(
+                                      child: Icon(
+                                        icons[index],
+                                        size: 58,
+                                        color: l.locked ? Colors.blueGrey : ink,
+                                      ),
+                                    ),
                           ),
                         ),
                         const SizedBox(height: 16),
                         Text(
                           l.name.toUpperCase(),
                           style: TextStyle(
-                            fontSize: 23,
+                            fontSize: 17,
                             fontWeight: FontWeight.w900,
                             color: l.locked ? Colors.blueGrey : gold,
                           ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 12),
                         SizedBox(
@@ -562,6 +588,8 @@ class RuckusShellState extends State<RuckusShell>
                           child: Text(
                             l.description,
                             style: const TextStyle(fontSize: 13),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         OpButton(
@@ -587,7 +615,10 @@ class RuckusShellState extends State<RuckusShell>
           ),
         ),
         const SizedBox(height: 18),
-        _footer('ROOK / READY TO RUMBLE', 'ONE HARBOR. ONE VERY BAD PLAN.'),
+        _footer(
+          '${MenuState.characters[menu.character].name.toUpperCase()} / READY',
+          'TWO ACTIVE FRONTS. ONE JUGGERNAUT RESPONSE.',
+        ),
       ],
     );
   }
@@ -596,7 +627,7 @@ class RuckusShellState extends State<RuckusShell>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _header('THE FIELD MANUAL.', 'READ THIS. WING THE REST.'),
+        _header('THE FIELD MANUAL.', 'READ THIS. THEN ADVANCE.'),
         const SizedBox(height: 22),
         Expanded(
           child: SingleChildScrollView(
@@ -653,16 +684,16 @@ class RuckusShellState extends State<RuckusShell>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _header('SMALL TEAM. BIG RUCKUS.', 'CREDITS / ORIGINAL WORK'),
+        _header('SMALL TEAM. BIG ASSAULT.', 'CREDITS / ORIGINAL WORK'),
         const SizedBox(height: 36),
         Expanded(
           child: SingleChildScrollView(
             child: _panel(
               const Text(
-                'OPERATION RUCKUS\n\n'
-                'An original comic-book arcade adventure.\n'
-                'Characters, harbor, vehicles, effects, and pixel artwork\n'
-                'are drawn in code for this game. No borrowed game assets.\n\n'
+                'JUGGERNAUT ASSAULT\n\n'
+                'An original retro-comic arcade adventure.\n'
+                'Character art extracted from the supplied Juggernaut concept sheets.\n'
+                'Original environment and equipment artwork, with code-driven effects.\n\n'
                 'Built with Flutter + Flame.\n'
                 'Audio is intentionally silent; event hooks are ready\n'
                 'for a future original soundtrack and sound effects.\n\n'
@@ -694,7 +725,7 @@ class RuckusShellState extends State<RuckusShell>
                   child: Column(
                     children: [
                       Text(
-                        'IRONJAW SIEGE WALKER / PHASE ${s.boss.phase}',
+                        'IRON WARDEN WALKER / PHASE ${s.boss.phase}',
                         style: const TextStyle(
                           fontSize: 11,
                           color: cream,
@@ -738,7 +769,7 @@ class RuckusShellState extends State<RuckusShell>
               runSpacing: 3,
               children: [
                 Text(
-                  'ROOK  ♥ ${p.health}',
+                  'UNIT ${(s.characterIndex + 1).toString().padLeft(2, '0')}  ♥ ${p.health}',
                   style: const TextStyle(
                     color: coral,
                     fontWeight: FontWeight.bold,
@@ -756,7 +787,7 @@ class RuckusShellState extends State<RuckusShell>
                 Text('SCORE ${s.score.toString().padLeft(6, '0')}'),
                 if (p.inVehicle)
                   Text(
-                    'BULLFROG ♥ ${s.vehicle.hp}',
+                    'JUGGER TREAD ♥ ${s.vehicle.hp}',
                     style: const TextStyle(color: mint),
                   ),
               ],
@@ -854,7 +885,9 @@ class RuckusShellState extends State<RuckusShell>
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _eyebrow(
-                      paused ? 'TAKE A BREATHER' : 'IRON HARBOR / AFTER ACTION',
+                      paused
+                          ? 'TAKE A BREATHER'
+                          : '${MenuState.levels[menu.level].name.toUpperCase()} / AFTER ACTION',
                     ),
                     const SizedBox(height: 10),
                     Text(
@@ -876,10 +909,10 @@ class RuckusShellState extends State<RuckusShell>
                         'TIME ${s.elapsed ~/ 60}:${(s.elapsed.toInt() % 60).toString().padLeft(2, '0')}'
                         '  •  BEST ${widget.progress.bestScore}\n'
                         '${won
-                            ? 'The lunch breaks are safe. For now.'
+                            ? 'The line holds. For now.'
                             : s.checkpointReached
                             ? 'Retry from the latest checkpoint.'
-                            : 'Retry from the harbor landing.'}',
+                            : 'Retry from the insertion point.'}',
                         style: const TextStyle(color: mint, height: 1.6),
                       ),
                     const SizedBox(height: 14),
@@ -983,13 +1016,27 @@ Widget _eyebrow(String text) => Text(
 Widget _footer(String left, String right) => Row(
   mainAxisAlignment: MainAxisAlignment.spaceBetween,
   children: [
-    Text(left, style: const TextStyle(color: cream, fontSize: 11)),
-    Text(right, style: const TextStyle(color: mint, fontSize: 11)),
+    Expanded(
+      child: Text(
+        left,
+        style: const TextStyle(color: cream, fontSize: 11),
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
+    const SizedBox(width: 12),
+    Expanded(
+      child: Text(
+        right,
+        textAlign: TextAlign.right,
+        style: const TextStyle(color: mint, fontSize: 11),
+        overflow: TextOverflow.ellipsis,
+      ),
+    ),
   ],
 );
 
 Widget _panel(Widget child, {bool muted = false}) => Container(
-  padding: const EdgeInsets.all(18),
+  padding: const EdgeInsets.all(12),
   decoration: BoxDecoration(
     color: (muted ? const Color(0xff20333c) : ink).withValues(alpha: .95),
     border: Border.all(color: muted ? Colors.blueGrey : mint, width: 2),
@@ -1036,15 +1083,15 @@ class OpButton extends StatelessWidget {
         disabledBackgroundColor: const Color(0xff344752),
         disabledForegroundColor: const Color(0xff9aa9aa),
         elevation: 0,
-        minimumSize: Size(0, compact ? 42 : 48),
+        minimumSize: Size(0, compact ? 34 : 48),
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 10 : 20,
-          vertical: 12,
+          vertical: compact ? 8 : 12,
         ),
         shape: const RoundedRectangleBorder(),
         side: const BorderSide(color: ink, width: 2),
         textStyle: TextStyle(
-          fontSize: compact ? 11 : 15,
+          fontSize: compact ? 10 : 15,
           fontFamily: 'monospace',
           fontWeight: FontWeight.w900,
           letterSpacing: 1,
@@ -1072,10 +1119,10 @@ class _PortraitPainter extends CustomPainter {
   final bool locked;
   @override
   void paint(Canvas canvas, Size size) {
-    final scale = math.min(size.width / 48, size.height / 58);
+    final scale = math.min(size.width / 64, size.height / 72);
     PixelArt.paintPortrait(
       canvas,
-      Offset((size.width - 48 * scale) / 2, (size.height - 58 * scale) / 2),
+      Offset((size.width - 64 * scale) / 2, (size.height - 72 * scale) / 2),
       scale,
       variant: variant,
       locked: locked,
@@ -1095,6 +1142,17 @@ class _HarborPainter extends CustomPainter {
       PixelArt.paintHarbor(canvas, size, time);
   @override
   bool shouldRepaint(_HarborPainter oldDelegate) => time != oldDelegate.time;
+}
+
+class _MissionPainter extends CustomPainter {
+  _MissionPainter(this.mission);
+  final int mission;
+  @override
+  void paint(Canvas canvas, Size size) =>
+      ArtAssets.missionPreview(canvas, size, mission);
+  @override
+  bool shouldRepaint(_MissionPainter oldDelegate) =>
+      mission != oldDelegate.mission;
 }
 
 class _HoldButton extends StatefulWidget {

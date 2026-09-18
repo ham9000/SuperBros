@@ -1,11 +1,11 @@
 {
-    "name": "Operation Ruckus",
-    "short_name": "Ruckus",
+    "name": "Juggernaut Assault",
+    "short_name": "Juggernaut",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#102c3a",
     "theme_color": "#102c3a",
-    "description": "Original comic-book arcade action in Iron Harbor.",
+    "description": "Original retro-comic arcade action in Shipping Yard and Transit Hub missions.",
     "orientation": "landscape",
     "prefer_related_applications": false,
     "icons": [

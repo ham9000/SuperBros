@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.superbros" "\0"
-            VALUE "FileDescription", "super_bros" "\0"
+            VALUE "FileDescription", "Juggernaut Assault" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "super_bros" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.superbros. All rights reserved." "\0"
             VALUE "OriginalFilename", "super_bros.exe" "\0"
-            VALUE "ProductName", "super_bros" "\0"
+            VALUE "ProductName", "Juggernaut Assault" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

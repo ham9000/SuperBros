@@ -16,6 +16,8 @@ class GameState {
   GameState({
     GameInput? input,
     AudioBus? audio,
+    this.characterIndex = 0,
+    this.missionIndex = 0,
     this.encounterSeed = GameConfig.encounterSeed,
     this.inspectEncounters = false,
     this.cameraFacingFraction = GameConfig.cameraFacingFraction,
@@ -26,6 +28,8 @@ class GameState {
 
   final GameInput input;
   final AudioBus audio;
+  final int characterIndex;
+  final int missionIndex;
   final int encounterSeed;
   final bool inspectEncounters;
   final double cameraFacingFraction;
@@ -139,7 +143,12 @@ class GameState {
     for (var i = 0; i < 12; i++) {
       pickups.add(Pickup(x: 290.0 + i * 720, kind: PickupType.values[i % 4]));
     }
-    _announce('IRON HARBOR • Rescue the captives. Stop the Iron Warden.', 6);
+    _announce(
+      missionIndex == 1
+          ? 'TRANSIT HUB • Clear the gates. Ground the Iron Warden.'
+          : 'IRON HARBOR • Rescue the captives. Stop the Iron Warden.',
+      6,
+    );
   }
 
   void pause() {
