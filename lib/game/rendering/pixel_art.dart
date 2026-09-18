@@ -107,6 +107,7 @@ abstract final class PixelArt {
     canvas.translate(offset.dx, offset.dy);
     canvas.scale(scale);
     final id = variant.clamp(0, 4);
+    final unitLabel = id == 1 ? '02' : '0${id + 1}';
     final (armor, accent, skin, hair, helmet) = _unitColors(id, locked: locked);
     _r(canvas, 0, 0, 64, 72, midnight);
     _r(canvas, 0, 0, 64, 4, ink);
@@ -118,14 +119,7 @@ abstract final class PixelArt {
     _r(canvas, 7, 8, 50, 56, const Color(0xff8a8777));
     _r(canvas, 9, 10, 46, 52, const Color(0xff575c56));
     _r(canvas, 10, 58, 44, 3, ink);
-    pixelText(
-      canvas,
-      id == 1 ? '02' : '0${id + 1}',
-      45,
-      13,
-      locked ? steel : cream,
-      scale: 2,
-    );
+    pixelText(canvas, unitLabel, 45, 13, locked ? steel : cream, scale: 2);
     _r(canvas, 7, 13, 13, 2, locked ? steel : accent);
     _r(canvas, 44, 52, 9, 2, locked ? steel : accent);
     _plate(canvas, 8, 44, 48, 28, ink);
@@ -161,7 +155,7 @@ abstract final class PixelArt {
       _line(canvas, 37, 15, 43, 13, orange);
       _r(canvas, 25, 40, 4, 1, cream);
       _r(canvas, 33, 40, 3, 1, cream);
-      pixelText(canvas, '02', 18, 50, cream);
+      pixelText(canvas, unitLabel, 18, 50, cream);
     } else {
       _plate(canvas, 18, 15, 30, 32, ink);
       _r(canvas, 21, 22, 24, 20, skin);
@@ -518,12 +512,14 @@ abstract final class PixelArt {
           pixelText(c, 'ARRIVALS', x + 20, 174, cream);
           _r(c, x + 18, 189, 15, 29, royal);
           _r(c, x + 74, 189, 15, 29, magenta);
+          break;
         case 1:
           _plate(c, x + 4, 173, 118, 24, midnight);
           _r(c, x + 9, 178, 108, 12, royal);
           pixelText(c, 'A  B  C  GATES', x + 16, 181, cream);
           _r(c, x + 26, 198, 65, 20, const Color(0xff313846));
           _r(c, x + 29, 202, 58, 3, sky);
+          break;
         case 2:
           _r(c, x + 4, 196, 126, 5, ink);
           for (var b = 0; b < 7; b++) {
@@ -532,12 +528,14 @@ abstract final class PixelArt {
           }
           _plate(c, x + 30, 152, 55, 35, const Color(0xff394253));
           pixelText(c, 'BAGS', x + 42, 164, lime);
+          break;
         case 3:
           _plate(c, x + 12, 147, 95, 70, const Color(0xff263246));
           _r(c, x + 18, 153, 83, 45, const Color(0xffb7e4ea));
           _line(c, x.round() + 18, 198, x.round() + 100, 153, sky, 2);
           _line(c, x.round() + 20, 153, x.round() + 99, 198, sky, 2);
           pixelText(c, 'BRIDGE', x + 29, 204, cream);
+          break;
         default:
           _plate(c, x + 6, 176, 77, 29, royal);
           _r(c, x + 17, 170, 45, 8, ink);
@@ -545,6 +543,7 @@ abstract final class PixelArt {
           _r(c, x + 66, 184, 45, 22, const Color(0xff4a5260));
           _r(c, x + 71, 178, 31, 7, orange);
           pixelText(c, 'CARGO', x + 20, 187, cream);
+          break;
       }
       if (worldX % 450 == 0) {
         _r(c, x + 130, 145, 3, 73, ink);
