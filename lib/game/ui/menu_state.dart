@@ -2,6 +2,7 @@ enum AppScreen { title, main, characters, levels, help, credits, mission }
 
 class CharacterInfo {
   const CharacterInfo(
+    this.unit,
     this.name,
     this.role,
     this.description,
@@ -9,6 +10,7 @@ class CharacterInfo {
     this.locked = true,
   });
 
+  final String unit;
   final String name;
   final String role;
   final String description;
@@ -33,47 +35,68 @@ class MissionInfo {
 class MenuState {
   static const characters = [
     CharacterInfo(
-      'Rook',
-      'THE IMPROVISER',
-      'Big scarf. Bigger bad ideas.',
-      'SPEED  ★★★★    ARMOR  ★★★    GRIT  ★★★★★',
+      '01',
+      'Unit 01',
+      'RESILIENT POINT MAN',
+      'White-blue armor, spiky hair, and enough coffee to keep moving.',
+      'UNIT 01  ★★★★ SPEED    ★★★ ARMOR    ★★★★★ GRIT',
       locked: false,
     ),
     CharacterInfo(
-      'Nyx',
-      'THE NIGHT SHIFT',
-      'Currently on a very long lunch.',
-      'STEALTH  ★★★★★    GRIT  ★★★',
+      '02',
+      'Unit 02',
+      'ARMORED ASSAULT',
+      'Helmet sealed. Armor tagged. Same mission, heavier answers.',
+      'UNIT 02  ★★ SPEED    ★★★★★ ARMOR    ★★★★★ FIREPOWER',
+      locked: false,
     ),
     CharacterInfo(
-      'Bolt',
-      'THE LIVE WIRE',
-      'Still looking for the off switch.',
-      'SPEED  ★★★★★    GRIT  ★★★',
+      '03',
+      'Unit 03',
+      'QUICK STRIKE',
+      'Ponytail, cheek bandage, and a comeback for every firefight.',
+      'UNIT 03  ★★★★★ SPEED    ★★★ ARMOR    ★★★★ STYLE',
+      locked: false,
     ),
     CharacterInfo(
-      'Mae',
-      'THE FIXER',
-      'Can repair anything. Except the plan.',
-      'ARMOR  ★★★★★    GRIT  ★★★★',
+      '04',
+      'Unit 04',
+      'GROUND ANCHOR',
+      'Calm under fire in blue-black armor with orange shoulders.',
+      'UNIT 04  ★★★ SPEED    ★★★★ ARMOR    ★★★★★ FOCUS',
+      locked: false,
+    ),
+    CharacterInfo(
+      '05',
+      'Unit 05',
+      'REDLINE RAIDER',
+      'Red hair, red-white armor, and a grin that outruns the alarms.',
+      'UNIT 05  ★★★★★ SPEED    ★★★ ARMOR    ★★★★★ ENERGY',
+      locked: false,
     ),
   ];
 
   static const levels = [
     MissionInfo(
-      'Iron Harbor',
-      '01 / THE RUST COAST',
-      'Free the dock crew. Borrow a tank. Cancel a very large robot.',
+      'Shipping Yard / Iron Harbor',
+      '01 / RUST COAST',
+      'Free the dock crew through cranes, containers, and a walker blockade.',
+      locked: false,
+    ),
+    MissionInfo(
+      'Airport / Transit Hub',
+      '02 / SKYLINE TERMINAL',
+      'Push through arrivals, concourses, baggage belts, gates, and apron robots.',
       locked: false,
     ),
     MissionInfo(
       'Desert Convoy',
-      '02 / THE DUST BELT',
+      '03 / THE DUST BELT',
       'A road trip with extremely poor reviews.',
     ),
     MissionInfo(
       'Jungle Foundry',
-      '03 / THE GREEN MACHINE',
+      '04 / THE GREEN MACHINE',
       'Heavy industry. Heavier foliage.',
     ),
   ];

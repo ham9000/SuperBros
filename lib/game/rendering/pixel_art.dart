@@ -25,6 +25,11 @@ enum SpriteId {
 abstract final class PixelArt {
   static const ink = Color(0xff101e2b);
   static const navy = Color(0xff193947);
+  static const midnight = Color(0xff101522);
+  static const royal = Color(0xff1757b8);
+  static const sky = Color(0xff51c7ef);
+  static const magenta = Color(0xffd44be8);
+  static const lime = Color(0xffb4f04a);
   static const deepTeal = Color(0xff245760);
   static const teal = Color(0xff398783);
   static const mint = Color(0xff87d9b1);
@@ -32,6 +37,7 @@ abstract final class PixelArt {
   static const cream = Color(0xffffe1a6);
   static const gold = Color(0xffffbc62);
   static const orange = Color(0xfff17b42);
+  static const hazard = Color(0xffff8a25);
   static const red = Color(0xffca4945);
   static const rust = Color(0xff8d4748);
   static const steel = Color(0xff698e8c);
@@ -89,7 +95,7 @@ abstract final class PixelArt {
     _r(c, x, y, 1, 1, color);
   }
 
-  /// Draw a 64 x 72 portrait at [offset], with pixel size [scale].
+  /// Draw a 64 x 72 Juggernaut portrait at [offset], with pixel size [scale].
   static void paintPortrait(
     Canvas canvas,
     Offset offset,
@@ -100,54 +106,143 @@ abstract final class PixelArt {
     canvas.save();
     canvas.translate(offset.dx, offset.dy);
     canvas.scale(scale);
-    final vest = locked ? deepTeal : (variant == 1 ? orange : teal);
-    final hair = locked ? steel : (variant == 1 ? rust : cream);
-    _r(canvas, 0, 0, 64, 72, navy);
-    for (var y = 0; y < 72; y += 8) {
-      _line(canvas, 0, y, 64, y - 32, deepTeal);
+    final id = variant.clamp(0, 4);
+    final (armor, accent, skin, hair, helmet) = _unitColors(id, locked: locked);
+    _r(canvas, 0, 0, 64, 72, midnight);
+    _r(canvas, 0, 0, 64, 4, ink);
+    _r(canvas, 0, 68, 64, 4, ink);
+    for (var y = 7; y < 68; y += 9) {
+      _line(canvas, 1, y, 63, y - 28, locked ? navy : deepTeal);
     }
-    _r(canvas, 7, 7, 3, 19, mint);
-    _r(canvas, 10, 7, 15, 3, mint);
-    _r(canvas, 53, 48, 3, 17, mint);
-    _r(canvas, 42, 62, 14, 3, mint);
-    _plate(canvas, 7, 48, 52, 29, ink);
-    _plate(canvas, 12, 47, 43, 27, vest);
-    _r(canvas, 17, 52, 7, 20, locked ? steel : mint);
-    _r(canvas, 38, 52, 8, 20, locked ? steel : mint);
-    _r(canvas, 26, 58, 10, 14, navy);
-    _r(canvas, 18, 64, 5, 4, cream);
-    _plate(canvas, 19, 15, 30, 37, ink);
-    _r(canvas, 22, 23, 24, 23, locked ? steel : gold);
-    _r(canvas, 26, 26, 20, 17, locked ? steel : cream);
-    _r(canvas, 20, 17, 28, 9, hair);
-    _r(canvas, 24, 13, 21, 8, hair);
-    _r(canvas, 18, 22, 7, 12, hair);
-    _r(canvas, 42, 20, 7, 7, hair);
-    _r(canvas, 27, 30, 7, 2, ink);
-    _r(canvas, 39, 30, 7, 2, ink);
-    _r(canvas, 30, 31, 3, 4, ink);
-    _r(canvas, 40, 31, 3, 4, ink);
-    _r(canvas, 35, 35, 3, 5, orange);
-    _r(canvas, 33, 43, 9, 2, ink);
-    _r(canvas, 22, 46, 24, 8, locked ? navy : orange);
-    _r(canvas, 24, 47, 20, 2, locked ? steel : gold);
-    _r(canvas, 12, 50, 12, 5, locked ? steel : red);
-    _r(canvas, 7, 54, 12, 4, locked ? steel : orange);
-    _r(canvas, 3, 57, 9, 3, locked ? steel : orange);
-    if (variant == 1) {
-      _r(canvas, 23, 27, 23, 7, navy);
-      _r(canvas, 25, 28, 8, 3, mint);
-      _r(canvas, 37, 28, 7, 3, mint);
+    _r(canvas, 5, 6, 54, 60, const Color(0xff6f7067));
+    _r(canvas, 7, 8, 50, 56, const Color(0xff8a8777));
+    _r(canvas, 9, 10, 46, 52, const Color(0xff575c56));
+    _r(canvas, 10, 58, 44, 3, ink);
+    pixelText(
+      canvas,
+      id == 1 ? '02' : '0${id + 1}',
+      45,
+      13,
+      locked ? steel : cream,
+      scale: 2,
+    );
+    _r(canvas, 7, 13, 13, 2, locked ? steel : accent);
+    _r(canvas, 44, 52, 9, 2, locked ? steel : accent);
+    _plate(canvas, 8, 44, 48, 28, ink);
+    _plate(canvas, 12, 42, 40, 25, armor);
+    _r(canvas, 15, 46, 13, 5, locked ? steel : accent);
+    _r(canvas, 35, 46, 12, 5, locked ? steel : accent);
+    _r(canvas, 26, 51, 12, 15, midnight);
+    _r(canvas, 18, 57, 9, 3, cream);
+    _r(canvas, 37, 57, 9, 3, cream);
+    _r(canvas, 19, 63, 8, 5, ink);
+    _r(canvas, 37, 63, 8, 5, ink);
+    _plate(canvas, 4, 45, 14, 15, armor);
+    _plate(canvas, 46, 45, 14, 15, armor);
+    _r(canvas, 5, 48, 10, 4, accent);
+    _r(canvas, 49, 48, 8, 4, accent);
+
+    if (helmet) {
+      _plate(canvas, 17, 10, 33, 34, royal);
+      _r(canvas, 19, 12, 29, 7, armor);
+      _r(canvas, 20, 18, 27, 14, ink);
+      _r(canvas, 23, 20, 20, 5, const Color(0xff05070c));
+      _r(canvas, 45, 22, 4, 10, accent);
+      _r(canvas, 15, 20, 5, 11, accent);
+      _r(canvas, 21, 34, 24, 9, royal);
+      _r(canvas, 24, 37, 17, 2, sky);
+      _r(canvas, 47, 28, 9, 8, royal);
+      _r(canvas, 10, 28, 9, 8, royal);
+      _r(canvas, 11, 31, 5, 3, orange);
+      _r(canvas, 50, 31, 4, 3, orange);
+      for (final mark in [24, 28, 34]) {
+        _r(canvas, mark, 13, 1, 5, cream);
+      }
+      _line(canvas, 37, 15, 43, 13, orange);
+      _r(canvas, 25, 40, 4, 1, cream);
+      _r(canvas, 33, 40, 3, 1, cream);
+      pixelText(canvas, '02', 18, 50, cream);
+    } else {
+      _plate(canvas, 18, 15, 30, 32, ink);
+      _r(canvas, 21, 22, 24, 20, skin);
+      _r(canvas, 25, 27, 5, 2, ink);
+      _r(canvas, 37, 27, 5, 2, ink);
+      _r(canvas, 27, 29, 2, 3, ink);
+      _r(canvas, 39, 29, 2, 3, ink);
+      _r(canvas, 33, 32, 3, 5, rust);
+      _r(canvas, 30, 40, 10, 2, ink);
+      if (id == 0) {
+        _r(canvas, 18, 17, 29, 7, hair);
+        _r(canvas, 22, 11, 6, 8, hair);
+        _r(canvas, 29, 9, 5, 10, hair);
+        _r(canvas, 36, 11, 6, 8, hair);
+        _r(canvas, 17, 23, 5, 10, hair);
+        _r(canvas, 50, 53, 6, 7, cream);
+        _r(canvas, 51, 51, 4, 2, ink);
+        _r(canvas, 46, 59, 11, 2, accent);
+      } else if (id == 2) {
+        _r(canvas, 18, 14, 29, 8, hair);
+        _r(canvas, 42, 10, 7, 10, hair);
+        _r(canvas, 48, 6, 8, 9, hair);
+        _r(canvas, 55, 8, 4, 13, hair);
+        _r(canvas, 20, 22, 4, 13, hair);
+        _r(canvas, 24, 36, 6, 2, cream);
+      } else if (id == 3) {
+        _r(canvas, 20, 14, 25, 6, hair);
+        _r(canvas, 18, 18, 30, 5, hair);
+        _r(canvas, 19, 22, 5, 8, hair);
+      } else {
+        _r(canvas, 17, 14, 30, 7, hair);
+        _r(canvas, 15, 20, 8, 13, hair);
+        _r(canvas, 43, 18, 8, 16, hair);
+        _r(canvas, 47, 28, 7, 10, hair);
+        _r(canvas, 22, 11, 20, 4, red);
+      }
     }
+    _r(canvas, 12, 43, 40, 4, ink);
+    _r(canvas, 16, 43, 32, 2, accent);
+    _r(canvas, 4, 63, 56, 2, ink);
     if (locked) {
-      _plate(canvas, 24, 49, 17, 16, ink);
-      _r(canvas, 28, 44, 9, 3, cream);
-      _r(canvas, 26, 47, 3, 7, cream);
-      _r(canvas, 35, 47, 3, 7, cream);
-      _r(canvas, 27, 54, 11, 8, gold);
-      _r(canvas, 31, 56, 3, 4, ink);
+      _plate(canvas, 23, 47, 18, 17, ink);
+      _r(canvas, 27, 43, 10, 4, cream);
+      _r(canvas, 25, 46, 3, 8, cream);
+      _r(canvas, 36, 46, 3, 8, cream);
+      _r(canvas, 28, 54, 8, 6, gold);
+      _r(canvas, 31, 56, 2, 4, ink);
     }
     canvas.restore();
+  }
+
+  static (Color, Color, Color, Color, bool) _unitColors(
+    int id, {
+    bool locked = false,
+  }) {
+    if (locked) return (steel, deepTeal, steel, steel, id == 1);
+    return switch (id) {
+      1 => (royal, orange, const Color(0xff6c4635), midnight, true),
+      2 => (cream, red, const Color(0xffd99a70), midnight, false),
+      3 => (
+        navy,
+        orange,
+        const Color(0xff5b2f22),
+        const Color(0xff181719),
+        false,
+      ),
+      4 => (
+        red,
+        cream,
+        const Color(0xffa96548),
+        const Color(0xffb63b2d),
+        false,
+      ),
+      _ => (
+        white,
+        royal,
+        const Color(0xffd09568),
+        const Color(0xff6a3828),
+        false,
+      ),
+    };
   }
 
   /// Cover-fills any menu canvas with an animated, 480 x 270 harbor.
@@ -162,8 +257,25 @@ abstract final class PixelArt {
     );
     canvas.scale(scale);
     _harbor(canvas, time, time * 2);
+    _menuGrit(canvas, time);
     _dock(canvas, 0, time);
     canvas.restore();
+  }
+
+  static void _menuGrit(Canvas c, double time) {
+    _plate(c, 18, 18, 178, 31, ink);
+    pixelText(c, 'JUGGERNAUTS', 28, 28, cream, scale: 2);
+    pixelText(c, 'ASSAULT', 115, 29, orange);
+    _r(c, 205, 23, 74, 5, royal);
+    _r(c, 205, 31, 50, 5, magenta);
+    _r(c, 205, 39, 64, 5, sky);
+    _plate(c, 326, 34, 116, 31, midnight);
+    pixelText(c, 'TRANSIT HUB', 336, 43, sky);
+    pixelText(c, 'NOW OPEN', 348, 54, lime);
+    for (var i = 0; i < 12; i++) {
+      final x = (21 + i * 39 + time * 3).round() % 480;
+      _r(c, x, 8 + i * 17 % 124, 2 + i % 5, 1, i.isEven ? cream : rust);
+    }
   }
 
   static void _harbor(Canvas c, double time, double camera) {
@@ -223,6 +335,49 @@ abstract final class PixelArt {
     }
   }
 
+  static void _airport(Canvas c, double time, double camera) {
+    _r(c, 0, 0, 480, 270, const Color(0xff25375a));
+    _r(c, 0, 31, 480, 42, const Color(0xff5aa7c8));
+    _r(c, 0, 73, 480, 45, const Color(0xffd6b783));
+    _r(c, 0, 118, 480, 53, const Color(0xff6d7380));
+    for (var i = -1; i < 8; i++) {
+      final x = (i * 76 - camera * .07 % 76).round();
+      final h = 18 + (i * 13).abs() % 36;
+      _r(c, x, 119 - h, 46, h, const Color(0xff41506c));
+      _r(c, x + 5, 114 - h, 12, 5, sky);
+      _r(c, x + 25, 107 - h, 4, 13, magenta);
+    }
+    for (var i = -1; i < 5; i++) {
+      final x = (i * 155 - camera * .18 % 155).round();
+      _r(c, x, 86, 134, 51, const Color(0xff31435a));
+      _r(c, x + 5, 91, 124, 39, const Color(0xff8fcfe1));
+      for (var w = 0; w < 6; w++) {
+        _r(c, x + 12 + w * 19, 96, 11, 28, w.isEven ? sky : cream);
+      }
+      _r(c, x + 24, 78, 70, 8, midnight);
+      _r(c, x + 29, 80, 41, 3, orange);
+      _r(c, x + 72, 80, 15, 3, magenta);
+    }
+    for (var i = -1; i < 5; i++) {
+      final x = (i * 146 - camera * .34 % 146).round();
+      _r(c, x, 66, 132, 6, midnight);
+      _r(c, x + 4, 67, 123, 2, sky);
+      _r(c, x + 16, 56, 56, 12, royal);
+      pixelText(c, 'SKYLINE', x + 22, 60, cream);
+      _r(c, x + 88, 54, 24, 16, orange);
+      _r(c, x + 93, 57, 14, 4, cream);
+    }
+    _r(c, 0, 146, 480, 72, const Color(0xff384050));
+    _r(c, 0, 149, 480, 4, sky);
+    _r(c, 0, 162, 480, 3, magenta);
+    for (var i = 0; i < 44; i++) {
+      final x =
+          ((i * 41 - camera * .5 + time * (i.isEven ? 4 : -2)) % 510 - 20);
+      final y = 167 + i * 19 % 42;
+      _r(c, x, y, 12 + i % 15, 2, i % 4 == 0 ? lime : sky);
+    }
+  }
+
   static void _crane(Canvas c, int x, int y, Color color) {
     _r(c, x, y + 13, 5, 87, color);
     _r(c, x - 7, y + 93, 20, 5, color);
@@ -265,19 +420,24 @@ abstract final class PixelArt {
     }
   }
 
-  static void _dock(Canvas c, double camera, double time) {
+  static void _dock(
+    Canvas c,
+    double camera,
+    double time, {
+    bool airport = false,
+  }) {
     final ground = GameConfig.groundY;
     _r(c, 0, ground, 480, 52, ink);
-    _r(c, 0, ground, 480, 4, pale);
+    _r(c, 0, ground, 480, 4, airport ? sky : pale);
     _r(c, 0, ground + 4, 480, 5, steel);
-    _r(c, 0, ground + 9, 480, 3, deepTeal);
-    _r(c, 0, ground + 12, 480, 31, navy);
-    _r(c, 0, ground + 43, 480, 9, deepTeal);
+    _r(c, 0, ground + 9, 480, 3, airport ? magenta : deepTeal);
+    _r(c, 0, ground + 12, 480, 31, airport ? const Color(0xff252c3d) : navy);
+    _r(c, 0, ground + 43, 480, 9, airport ? royal : deepTeal);
     for (var i = -1; i < 17; i++) {
       final x = (i * 32 - camera % 32).round();
       _r(c, x, ground, 2, 9, deepTeal);
-      _r(c, x + 4, ground + 1, 21, 1, cream);
-      _r(c, x + 8, ground + 6, 6, 1, teal);
+      _r(c, x + 4, ground + 1, 21, 1, airport ? lime : cream);
+      _r(c, x + 8, ground + 6, 6, 1, airport ? sky : teal);
       _r(c, x + 3, ground + 13, 27, 26, deepTeal);
       _r(c, x + 5, ground + 15, 23, 22, navy);
       _line(
@@ -291,7 +451,7 @@ abstract final class PixelArt {
       );
       _bolt(c, x + 5, ground + 15);
       _bolt(c, x + 26, ground + 35);
-      _r(c, x + 7, ground + 45, 12, 2, teal);
+      _r(c, x + 7, ground + 45, 12, 2, airport ? magenta : teal);
     }
     for (var i = -1; i < 7; i++) {
       final x = (i * 103 - camera * 1.08 % 103).round();
@@ -319,12 +479,16 @@ abstract final class PixelArt {
 
   static void _worldScenery(Canvas c, GameState s) {
     final camera = s.cameraX;
+    if (s.missionIndex == 1) {
+      _airportScenery(c, s);
+      return;
+    }
     for (var i = -1; i < 6; i++) {
       final worldX = ((camera / 156).floor() + i) * 156;
       final x = worldX - camera;
       if (worldX % 468 == 0) {
         _container(c, x.round(), 164, 80, 54, deepTeal);
-        pixelText(c, 'RUCKUS', x + 10, 192, steel);
+        pixelText(c, 'JUGGER', x + 10, 192, steel);
       } else {
         _r(c, x + 10, 196, 4, 22, navy);
         _r(c, x + 60, 196, 4, 22, navy);
@@ -341,6 +505,55 @@ abstract final class PixelArt {
     }
   }
 
+  static void _airportScenery(Canvas c, GameState s) {
+    final camera = s.cameraX;
+    for (var i = -1; i < 7; i++) {
+      final worldX = ((camera / 150).floor() + i) * 150;
+      final x = worldX - camera;
+      final zone = ((worldX / 150).floor() % 5).abs();
+      switch (zone) {
+        case 0:
+          _plate(c, x + 5, 158, 112, 60, const Color(0xff273649));
+          _r(c, x + 11, 164, 100, 38, const Color(0xff8fcfe1));
+          pixelText(c, 'ARRIVALS', x + 20, 174, cream);
+          _r(c, x + 18, 189, 15, 29, royal);
+          _r(c, x + 74, 189, 15, 29, magenta);
+        case 1:
+          _plate(c, x + 4, 173, 118, 24, midnight);
+          _r(c, x + 9, 178, 108, 12, royal);
+          pixelText(c, 'A  B  C  GATES', x + 16, 181, cream);
+          _r(c, x + 26, 198, 65, 20, const Color(0xff313846));
+          _r(c, x + 29, 202, 58, 3, sky);
+        case 2:
+          _r(c, x + 4, 196, 126, 5, ink);
+          for (var b = 0; b < 7; b++) {
+            _r(c, x + 10 + b * 17, 198, 10, 7, b.isEven ? orange : royal);
+            _r(c, x + 12 + b * 17, 201, 6, 3, cream);
+          }
+          _plate(c, x + 30, 152, 55, 35, const Color(0xff394253));
+          pixelText(c, 'BAGS', x + 42, 164, lime);
+        case 3:
+          _plate(c, x + 12, 147, 95, 70, const Color(0xff263246));
+          _r(c, x + 18, 153, 83, 45, const Color(0xffb7e4ea));
+          _line(c, x.round() + 18, 198, x.round() + 100, 153, sky, 2);
+          _line(c, x.round() + 20, 153, x.round() + 99, 198, sky, 2);
+          pixelText(c, 'BRIDGE', x + 29, 204, cream);
+        default:
+          _plate(c, x + 6, 176, 77, 29, royal);
+          _r(c, x + 17, 170, 45, 8, ink);
+          _r(c, x + 20, 171, 34, 3, sky);
+          _r(c, x + 66, 184, 45, 22, const Color(0xff4a5260));
+          _r(c, x + 71, 178, 31, 7, orange);
+          pixelText(c, 'CARGO', x + 20, 187, cream);
+      }
+      if (worldX % 450 == 0) {
+        _r(c, x + 130, 145, 3, 73, ink);
+        _plate(c, x + 116, 134, 33, 19, midnight);
+        pixelText(c, 'JA', x + 126, 141, orange, scale: 1);
+      }
+    }
+  }
+
   static void renderScene(Canvas c, GameState s) {
     c.save();
     if (s.shake > 0) {
@@ -349,9 +562,14 @@ abstract final class PixelArt {
         (math.cos(s.elapsed * 117) * s.shake * .55).roundToDouble(),
       );
     }
-    _harbor(c, s.elapsed, s.cameraX);
+    final airport = s.missionIndex == 1;
+    if (airport) {
+      _airport(c, s.elapsed, s.cameraX);
+    } else {
+      _harbor(c, s.elapsed, s.cameraX);
+    }
     _worldScenery(c, s);
-    _dock(c, s.cameraX, s.elapsed);
+    _dock(c, s.cameraX, s.elapsed, airport: airport);
     c.save();
     c.translate(-s.cameraX.roundToDouble(), 0);
     for (final platform in s.platforms) {
@@ -586,6 +804,7 @@ abstract final class PixelArt {
         firing: player.fireCooldown > .06,
         airborne: !player.grounded,
         variant: player.weapon.index,
+        character: s.characterIndex,
       );
     }
     for (final shot in s.projectiles) {
@@ -746,15 +965,26 @@ abstract final class PixelArt {
   }
 
   static void _signs(Canvas c, GameState s) {
-    const signs = <(double, String, String)>[
-      (160, 'PORT RUCKUS', '01 // LANDING'),
-      (1420, 'KEEP MOVING', '02 // FREIGHT'),
-      (2950, 'RESCUE ROUTE', '03 // FREIGHT'),
-      (4550, 'ARMOR DEPOT', '04 // MOTOR POOL'),
-      (6200, 'NO TURNING BACK', '05 // FOUNDRY'),
-      (8250, 'DANGER AHEAD', '06 // IRON GATE'),
-      (GameConfig.bossArenaStart, 'IRON WARDEN', '07 // SHOWDOWN'),
-    ];
+    final signs =
+        s.missionIndex == 1
+            ? const <(double, String, String)>[
+              (160, 'SKYLINE ENTRY', '01 // ARRIVALS'),
+              (1420, 'BLUE LINE', '02 // CONCOURSE'),
+              (2950, 'BAG DROP', '03 // SERVICE'),
+              (4550, 'GATE SPAN', '04 // BRIDGE'),
+              (6200, 'APRON ACCESS', '05 // CARGO'),
+              (8250, 'ROBOT BAY', '06 // WARNING'),
+              (GameConfig.bossArenaStart, 'FINAL CALL', '07 // SHOWDOWN'),
+            ]
+            : const <(double, String, String)>[
+              (160, 'JUGGER DOCK', '01 // LANDING'),
+              (1420, 'KEEP MOVING', '02 // FREIGHT'),
+              (2950, 'RESCUE ROUTE', '03 // FREIGHT'),
+              (4550, 'ARMOR DEPOT', '04 // MOTOR POOL'),
+              (6200, 'NO TURNING BACK', '05 // GANTRY'),
+              (8250, 'DANGER AHEAD', '06 // IRON GATE'),
+              (GameConfig.bossArenaStart, 'IRON WARDEN', '07 // SHOWDOWN'),
+            ];
     for (final (x, title, subtitle) in signs) {
       if (!_visible(x, 110, s)) continue;
       _r(c, x + 8, 168, 4, 50, ink);
@@ -907,6 +1137,7 @@ abstract final class PixelArt {
     bool crouching = false,
     bool airborne = false,
     int variant = 0,
+    int character = 0,
   }) {
     final (w, h) = switch (id) {
       SpriteId.rook => (18.0, 30.0),
@@ -929,7 +1160,7 @@ abstract final class PixelArt {
     }
     switch (id) {
       case SpriteId.rook:
-        _rook(c, time, moving, firing, crouching, airborne, variant);
+        _rook(c, time, moving, firing, crouching, airborne, variant, character);
       case SpriteId.infantry:
       case SpriteId.shield:
         _soldier(c, time, moving, firing, id == SpriteId.shield);
@@ -959,53 +1190,96 @@ abstract final class PixelArt {
     bool crouching,
     bool airborne,
     int weapon,
+    int character,
   ) {
+    final id = character.clamp(0, 4);
+    final (armor, accent, skin, hair, helmet) = _unitColors(id);
     final step = moving ? (math.sin(time * 17) * 3).round() : 0;
     final bob = moving && step > 0 ? 1 : 0;
-    _r(c, 1, 29, 17, 2, deepTeal);
+    _r(c, 0, 29, 20, 2, deepTeal);
     c.save();
     c.translate(0, crouching ? 7 : bob.toDouble());
-    _plate(c, 2 - step, 23 - (airborne ? 3 : 0), 7, crouching ? 1 : 6, ink);
-    _r(c, 3 - step, 23 - (airborne ? 3 : 0), 4, crouching ? 1 : 4, teal);
+    final bodyTop = crouching ? 14 : 11 - (airborne ? 2 : 0);
+    final legY = crouching ? 20 : 23 - (airborne ? 3 : 0);
+    _plate(c, 2 - step, legY, 7, crouching ? 2 : 6, ink);
+    _r(c, 3 - step, legY, 4, crouching ? 1 : 4, armor);
     _r(c, 1 - step, crouching ? 20 : 28 - (airborne ? 3 : 0), 8, 2, ink);
-    _r(c, 10 + step, 22, 5, crouching ? 1 : 7, navy);
-    _r(c, 10 + step, crouching ? 20 : 27, 8, 3, ink);
-    _plate(c, 2, 12, 14, 13, teal);
-    _r(c, 3, 14, 4, 6, mint);
-    _r(c, 10, 14, 4, 6, mint);
-    _r(c, 7, 14, 2, 9, deepTeal);
-    _r(c, 2, 23, 13, 2, ink);
-    _r(c, 8, 23, 3, 2, gold);
-    _plate(c, 4, 2, 13, 12, gold);
-    _r(c, 7, 4, 9, 7, cream);
-    _r(c, 13, 6, 3, 2, ink);
-    _r(c, 15, 8, 3, 2, cream);
-    _r(c, 12, 11, 4, 1, rust);
-    _r(c, 3, 2, 4, 7, cream);
-    _r(c, 4, 0, 11, 4, cream);
-    _r(c, 7, 0, 6, 1, white);
-    _r(c, 2, 4, 4, 3, cream);
-    _r(c, 3, 11, 12, 3, orange);
-    _r(c, 2, 12, 6, 2, gold);
-    final flutter = (math.sin(time * 13) * 2).round();
-    _r(c, -3, 12 + flutter, 7, 3, red);
-    _r(c, -7, 11 + flutter, 5, 2, orange);
-    _plate(c, 9, 15, 10, 5, cream);
-    _r(c, 14, 15, 12, 4, ink);
-    _r(c, 16, 15, 8, 1, steel);
-    _r(c, 14, 19, 3, 4, ink);
-    _r(c, 23, 16, 5, 2, navy);
-    if (weapon == 1) {
-      _r(c, 15, 14, 11, 2, mint);
-      _r(c, 20, 19, 3, 4, steel);
-      _r(c, 25, 15, 5, 3, ink);
-    } else if (weapon == 2) {
-      _plate(c, 12, 13, 17, 7, teal);
-      _r(c, 14, 14, 11, 2, mint);
-      _r(c, 26, 12, 4, 9, ink);
-      _r(c, 27, 14, 2, 5, gold);
+    _plate(c, 10 + step, legY - 1, 6, crouching ? 2 : 7, ink);
+    _r(c, 11 + step, legY, 4, crouching ? 1 : 4, id == 1 ? royal : armor);
+    _r(c, 10 + step, crouching ? 20 : 28, 8, 2, ink);
+    _plate(c, 1, bodyTop, 16, crouching ? 8 : 13, armor);
+    _r(c, 3, bodyTop + 2, 5, 4, accent);
+    _r(c, 10, bodyTop + 2, 5, 4, accent);
+    _r(c, 7, bodyTop + 4, 3, crouching ? 3 : 8, midnight);
+    _r(c, 3, bodyTop + 9, 11, 2, ink);
+    _r(c, 8, bodyTop + 10, 3, 2, cream);
+    _plate(c, -1, bodyTop + 3, 5, 8, armor);
+    _plate(c, 13, bodyTop + 3, 5, 8, armor);
+    _r(c, -1, bodyTop + 4, 4, 3, accent);
+    _r(c, 14, bodyTop + 4, 3, 3, accent);
+
+    if (helmet) {
+      _plate(c, 2, 1, 16, 13, royal);
+      _r(c, 4, 3, 12, 3, accent);
+      _r(c, 5, 5, 11, 5, ink);
+      _r(c, 12, 6, 3, 2, const Color(0xff05070c));
+      _r(c, 3, 10, 13, 3, royal);
+      _r(c, 5, 12, 4, 1, sky);
+      _r(c, 2, 1, 1, 5, cream);
+      _r(c, 5, 1, 1, 5, cream);
+      _line(c, 11, 2, 15, 1, orange);
+      _r(c, 14, 10, 3, 3, accent);
+      pixelText(c, '2', 4, 15, cream);
+    } else {
+      _plate(c, 3, 2, 14, 12, ink);
+      _r(c, 5, 5, 11, 7, skin);
+      _r(c, 12, 6, 3, 2, ink);
+      _r(c, 15, 8, 2, 2, skin);
+      _r(c, 11, 11, 4, 1, rust);
+      if (id == 0) {
+        _r(c, 2, 3, 15, 4, hair);
+        _r(c, 5, 0, 3, 5, hair);
+        _r(c, 9, 0, 3, 5, hair);
+        _r(c, 13, 1, 3, 5, hair);
+        _r(c, 1, 5, 4, 5, hair);
+        _r(c, -4, 17, 5, 4, cream);
+        _r(c, -5, 15, 4, 2, ink);
+      } else if (id == 2) {
+        _r(c, 2, 3, 15, 4, hair);
+        _r(c, 1, 6, 4, 8, hair);
+        _r(c, 15, 2, 5, 4, hair);
+        _r(c, 19, 0, 5, 4, hair);
+        _r(c, 22, 2, 3, 9, hair);
+        _r(c, 5, 10, 5, 1, cream);
+      } else if (id == 3) {
+        _r(c, 3, 3, 14, 3, hair);
+        _r(c, 2, 5, 15, 3, hair);
+        _r(c, 3, 7, 4, 4, hair);
+      } else {
+        _r(c, 2, 3, 15, 4, hair);
+        _r(c, 1, 6, 5, 8, hair);
+        _r(c, 14, 5, 5, 10, hair);
+        _r(c, 18, 10, 4, 5, hair);
+      }
     }
-    if (firing) _muzzle(c, 29, 17, time);
+    final armY = crouching ? 16 : 15;
+    _plate(c, 10, armY, 9, 5, cream);
+    _r(c, 15, armY, 12, 4, ink);
+    _r(c, 17, armY, 8, 1, steel);
+    _r(c, 15, armY + 4, 3, 4, ink);
+    _r(c, 23, armY + 1, 5, 2, navy);
+    if (weapon == 1) {
+      _r(c, 16, armY - 1, 12, 2, sky);
+      _r(c, 21, armY + 4, 3, 4, steel);
+      _r(c, 27, armY, 5, 3, ink);
+    } else if (weapon == 2) {
+      _plate(c, 13, armY - 2, 17, 7, royal);
+      _r(c, 15, armY - 1, 11, 2, sky);
+      _r(c, 27, armY - 3, 4, 9, ink);
+      _r(c, 28, armY - 1, 2, 5, gold);
+    }
+    if (firing) _muzzle(c, weapon == 2 ? 31 : 29, armY + 2, time);
+    if (airborne) _spark(c, 2, 27, time, accent);
     c.restore();
   }
 
@@ -1023,18 +1297,18 @@ abstract final class PixelArt {
     final headX = 6 + 15 * t;
     final h = enemy.height;
     _r(c, 0, h - 4, 10 + 5 * t, 4, ink);
-    _r(c, 3, h - 5, 8 + 5 * t, 3, rust);
-    _plate(c, 8, 7, headX - 1, h - 7, rust);
+    _r(c, 3, h - 5, 8 + 5 * t, 3, royal);
+    _plate(c, 8, 7, headX - 1, h - 7, royal);
     _r(c, 10, 8, headX - 5, 2, orange);
-    _plate(c, headX, 1, 9, 8, gold);
-    _r(c, headX - 1, 0, 11, 4, red);
-    _r(c, headX + 5, 4, 4, 2, mint);
+    _plate(c, headX, 1, 9, 8, midnight);
+    _r(c, headX - 1, 0, 11, 4, royal);
+    _r(c, headX + 5, 4, 4, 2, red);
     _r(c, headX - 1, 8, 9, 3, orange);
     _r(c, headX + 4, 5, enemy.width - headX - 4, 3, ink);
     _r(c, headX + 5, 5, enemy.width - headX - 5, 1, steel);
     if (enemy.kind == EnemyType.shield) {
       _plate(c, enemy.width - 9, h - 6, 8, 6, navy);
-      _r(c, enemy.width - 7, h - 5, 4, 2, mint);
+      _r(c, enemy.width - 7, h - 5, 4, 2, sky);
     }
     if (enemy.throwingGrenade) {
       _r(c, headX - 3, 0, 4, 4, gold);
@@ -1055,27 +1329,27 @@ abstract final class PixelArt {
     _r(c, 2, 27, shield ? 26 : 22, 2, deepTeal);
     _r(c, 4 - step, 23, 7, 5, ink);
     _r(c, 14 + step, 23, 8, 5, ink);
-    _r(c, 5 - step, 23, 4, 2, rust);
-    _plate(c, 2, 11, 20, 15, rust);
+    _r(c, 5 - step, 23, 4, 2, royal);
+    _plate(c, 2, 11, 20, 15, royal);
     _r(c, 4, 13, 16, 3, orange);
-    _r(c, 8, 16, 12, 5, red);
+    _r(c, 8, 16, 12, 5, midnight);
     _r(c, 4, 22, 16, 3, ink);
     _r(c, 12, 23, 3, 2, gold);
-    _plate(c, 5, 2, 15, 12, gold);
+    _plate(c, 5, 2, 15, 12, midnight);
     _r(c, 4, 1, 16, 6, ink);
-    _r(c, 5, 2, 13, 4, red);
+    _r(c, 5, 2, 13, 4, royal);
     _r(c, 7, 2, 8, 1, orange);
     _r(c, 4, 6, 18, 3, ink);
-    _r(c, 14, 7, 6, 2, mint);
-    _r(c, 17, 11, 4, 2, rust);
+    _r(c, 14, 7, 6, 2, red);
+    _r(c, 17, 11, 4, 2, royal);
     _plate(c, 14, 16, 10, 6, orange);
     _r(c, 20, 16, 10, 4, ink);
     _r(c, 21, 16, 7, 1, steel);
     if (shield) {
       _plate(c, 18, 10, 12, 21, navy);
       _r(c, 20, 12, 8, 2, steel);
-      _r(c, 20, 14, 8, 4, mint);
-      _r(c, 20, 21, 8, 7, rust);
+      _r(c, 20, 14, 8, 4, sky);
+      _r(c, 20, 21, 8, 7, royal);
       _line(c, 20, 28, 27, 21, gold, 2);
       _bolt(c, 20, 18);
       _bolt(c, 26, 18);
@@ -1087,11 +1361,11 @@ abstract final class PixelArt {
     _r(c, 1, 21, 25, 3, ink);
     _r(c, 4, 18, 5, 5, steel);
     _r(c, 19, 18, 5, 5, steel);
-    _plate(c, 7, 12, 14, 8, deepTeal);
-    _plate(c, 2, 3, 24, 13, rust);
+    _plate(c, 7, 12, 14, 8, royal);
+    _plate(c, 2, 3, 24, 13, midnight);
     _r(c, 4, 5, 19, 3, orange);
     _r(c, 5, 10, 8, 3, ink);
-    _r(c, 7, 10, 3, 2, firing ? cream : mint);
+    _r(c, 7, 10, 3, 2, firing ? cream : sky);
     _r(c, 22, 8, 12, 5, ink);
     _r(c, 23, 8, 9, 2, steel);
     _r(c, 8, 0, 2, 4, ink);
@@ -1108,16 +1382,16 @@ abstract final class PixelArt {
     _r(c, 1, 25, 16, 2, deepTeal);
     _r(c, 3, 21, 5, 5, ink);
     _r(c, 11, 21, 5, 5, ink);
-    _plate(c, 2, 11, 14, 13, cream);
-    _r(c, 4, 14, 10, 2, deepTeal);
-    _r(c, 4, 18, 10, 2, deepTeal);
-    _r(c, 5, 21, 8, 2, teal);
-    _plate(c, 3, 2, 13, 11, cream);
+    _plate(c, 2, 11, 14, 13, white);
+    _r(c, 4, 14, 10, 2, royal);
+    _r(c, 4, 18, 10, 2, orange);
+    _r(c, 5, 21, 8, 2, sky);
+    _plate(c, 3, 2, 13, 11, white);
     _r(c, 6, 6, 2, 2, ink);
     _r(c, 12, 6, 2, 2, ink);
     _r(c, 9, 10, 3, 1, rust);
-    _r(c, 3, 2, 12, 3, gold);
-    _r(c, 5, 0, 8, 3, gold);
+    _r(c, 3, 2, 12, 3, const Color(0xff6a3828));
+    _r(c, 5, 0, 8, 3, const Color(0xff6a3828));
     _r(c, 1, 4, 16, 2, orange);
     _r(c, 7, 0, 3, 4, cream);
     _r(c, 0, 15, 4, 7, cream);

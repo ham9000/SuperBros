@@ -33,6 +33,23 @@ Future<void> tapButton(WidgetTester tester, String label) async {
   await tester.pump();
 }
 
+Future<void> tapButtonAt(WidgetTester tester, String label, int index) async {
+  await tester.tap(find.widgetWithText(ElevatedButton, label).at(index));
+  await tester.pump();
+}
+
+Future<int> renderDigest(GameState state) async {
+  final recorder = ui.PictureRecorder();
+  PixelArt.renderScene(ui.Canvas(recorder), state);
+  final picture = recorder.endRecording();
+  final image = await picture.toImage(480, 270);
+  final data = await image.toByteData();
+  final digest = Object.hashAll(data!.buffer.asUint8List());
+  image.dispose();
+  picture.dispose();
+  return digest;
+}
+
 void step(RuckusShellState shell, double seconds) {
   for (var i = 0; i < (seconds * 60).ceil(); i++) {
     shell.game!.update(1 / 60);
@@ -77,6 +94,37 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('all Juggernauts and both active missions deploy through menus', (
+    tester,
+  ) async {
+    final shell = await launch(tester);
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pump();
+    await tapButton(tester, 'PLAY  ▶');
+    for (
+      var character = 0;
+      character < MenuState.characters.length;
+      character++
+    ) {
+      expect(MenuState.characters[character].locked, isFalse);
+      await tapButton(tester, 'SELECT ${MenuState.characters[character].unit}');
+      for (var level = 0; level < 2; level++) {
+        expect(MenuState.levels[level].locked, isFalse);
+        await tapButtonAt(tester, 'DEPLOY  ▶', level);
+        expect(shell.session!.characterIndex, character);
+        expect(shell.session!.missionIndex, level);
+        shell.game!.pauseEngine();
+        shell.session!.status = MissionStatus.gameOver;
+        await tester.pump();
+        await tapButton(tester, 'LEVEL SELECT');
+        await tester.pump();
+      }
+      await tester.sendKeyEvent(LogicalKeyboardKey.escape);
+      await tester.pump();
+    }
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('keyboard and touch move, jump, fire, and release safely', (
     tester,
@@ -146,25 +194,13 @@ void main() {
   testWidgets(
     'procedural entrances render warnings before sprites and animate all seven',
     (tester) async {
-      Future<int> render(GameState state) async {
-        final recorder = ui.PictureRecorder();
-        PixelArt.renderScene(ui.Canvas(recorder), state);
-        final picture = recorder.endRecording();
-        final image = await picture.toImage(480, 270);
-        final data = await image.toByteData();
-        final digest = Object.hashAll(data!.buffer.asUint8List());
-        image.dispose();
-        picture.dispose();
-        return digest;
-      }
-
       await tester.runAsync(() async {
         final state = GameState()..calloutTime = 0;
         state.enemies.clear();
-        final empty = await render(state);
+        final empty = await renderDigest(state);
         state.enemies.add(Enemy(x: 360, kind: EnemyType.infantry));
         expect(
-          await render(state),
+          await renderDigest(state),
           empty,
           reason: 'Dormant enemies must be invisible',
         );
@@ -190,28 +226,49 @@ void main() {
           state.enemies
             ..clear()
             ..add(enemy);
-          final dormant = await render(state);
+          final dormant = await renderDigest(state);
           expect(enemy.beginEntrance(context), isTrue);
-          final warning = await render(state);
+          final warning = await renderDigest(state);
           expect(
             warning,
             isNot(dormant),
             reason: '${type.name} needs a pre-arrival warning',
           );
           enemy.updateEntrance(1.25, context);
-          final moving = await render(state);
+          final moving = await renderDigest(state);
           expect(
             moving,
             isNot(warning),
             reason: '${type.name} must animate, not just wait',
           );
           enemy.updateEntrance(0.21, context);
-          expect(await render(state), isNot(moving));
+          expect(await renderDigest(state), isNot(moving));
         }
       });
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('rendering varies each Juggernaut and Airport mission art', (
+    tester,
+  ) async {
+    await tester.runAsync(() async {
+      final characterDigests = <int>{};
+      for (
+        var character = 0;
+        character < MenuState.characters.length;
+        character++
+      ) {
+        final state = GameState(characterIndex: character)..calloutTime = 0;
+        characterDigests.add(await renderDigest(state));
+      }
+      expect(characterDigests.length, MenuState.characters.length);
+      final harbor = GameState()..calloutTime = 0;
+      final airport = GameState(missionIndex: 1)..calloutTime = 0;
+      expect(await renderDigest(airport), isNot(await renderDigest(harbor)));
+    });
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('pause freezes, help preserves game, resume and restart work', (
     tester,

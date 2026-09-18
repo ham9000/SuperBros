@@ -11,6 +11,15 @@ void main() {
 
   test('only released characters and levels can advance navigation', () {
     final menu = MenuState()..screen = AppScreen.characters;
+    expect(MenuState.characters.map((c) => c.unit), [
+      '01',
+      '02',
+      '03',
+      '04',
+      '05',
+    ]);
+    expect(MenuState.characters.where((c) => !c.locked).length, 5);
+    expect(MenuState.levels.where((l) => !l.locked).length, 2);
     for (var i = 0; i < MenuState.characters.length; i++) {
       if (!MenuState.characters[i].locked) continue;
       expect(menu.selectCharacter(i), isFalse);
@@ -27,6 +36,20 @@ void main() {
     expect(menu.selectLevel(MenuState.levels.length), isFalse);
     expect(menu.selectLevel(0), isTrue);
     expect(menu.screen, AppScreen.mission);
+    menu.screen = AppScreen.characters;
+    for (var i = 0; i < MenuState.characters.length; i++) {
+      expect(menu.selectCharacter(i), isTrue);
+      expect(menu.character, i);
+      expect(menu.screen, AppScreen.levels);
+      menu.screen = AppScreen.levels;
+      for (var level = 0; level < 2; level++) {
+        expect(menu.selectLevel(level), isTrue);
+        expect(menu.level, level);
+        expect(menu.screen, AppScreen.mission);
+        menu.screen = AppScreen.levels;
+      }
+      menu.screen = AppScreen.characters;
+    }
   });
 
   test('help returns to its caller, not always the main menu', () {
@@ -64,8 +87,8 @@ void main() {
     expect(restored.bestScore, 1200);
     expect(restored.completed, isTrue);
     expect(restored.helpSeen, isTrue);
-    expect(MenuState.characters.where((c) => !c.locked).length, 1);
-    expect(MenuState.levels.where((l) => !l.locked).length, 1);
+    expect(MenuState.characters.where((c) => !c.locked).length, 5);
+    expect(MenuState.levels.where((l) => !l.locked).length, 2);
     final prefs = await SharedPreferences.getInstance();
     expect(prefs.getKeys(), {'ruckus.best', 'ruckus.completed', 'ruckus.help'});
   });

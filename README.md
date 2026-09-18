@@ -1,16 +1,18 @@
-# Operation Ruckus
+# Juggernaut Assault
 
-An original, playable comic-book run-and-gun built with Flutter and Flame.
-Play as **Rook** and liberate **Iron Harbor** from the Brass Bureau: rescue the
-dock crew, commandeer the **Bullfrog** scout vehicle, and take down the
-**Ironjaw Siege Walker**. All character and world artwork is generated in code;
-no assets from existing arcade games are used.
+An original, playable retro-comic run-and-gun built with Flutter and Flame.
+Deploy one of five **Juggernaut** units into **Shipping Yard / Iron Harbor** or
+the new **Airport / Transit Hub** front: rescue workers, commandeer the
+**Jugger Tread** scout vehicle, and take down the **Iron Warden Walker**. All
+character and world artwork is generated in code; no assets from existing
+arcade games are used.
 
 ## Play
 
-The title leads through the main menu, crew selection, and mission selection.
-Rook and Iron Harbor are playable. Nyx, Bolt, Mae, Desert Convoy, and Jungle
-Foundry are clearly locked future content, including after mission completion.
+The title leads through the main menu, Juggernaut unit selection, and mission
+selection. Units **01-05** are playable for this visual pass. **Shipping Yard /
+Iron Harbor** and **Airport / Transit Hub** are playable; Desert Convoy and
+Jungle Foundry remain clearly locked future content.
 
 | Input | Action |
 | --- | --- |
@@ -29,12 +31,16 @@ the D-pad and FIRE; tap JUMP, BOOM, or USE. The gamepad icon toggles touch
 controls. Controls respect device safe areas. Native mobile uses landscape;
 rotate a browser into landscape for the best experience.
 
-Iron Harbor includes infantry, frontal shields, telegraphing turrets, weapon
-and supply pickups, destructible crates and explosive barrels, elevated
-platforms, six captives, two checkpoints, a usable vehicle, and a phased boss
-with cannon bursts, arcing bombs, and jumpable ground shockwaves. Shields can
-be flanked, meleed, or blasted. Special weapons switch back to the unlimited
-sidearm when empty. Shoot restraints or interact to rescue crew.
+Both active fronts use the same deterministic combat systems: infantry, frontal
+shields, telegraphing turrets, weapon and supply pickups, destructible crates
+and explosive barrels, elevated platforms, six captives, two checkpoints, a
+usable vehicle, and a phased boss with cannon bursts, arcing bombs, and jumpable
+ground shockwaves. Shipping Yard layers cranes, containers, ships, graffiti, and
+dock lighting; Airport / Transit Hub layers arrivals signage, elevated rail,
+concourse glass, baggage belts, gate bridges, cargo zones, hologram colors, and
+automation props. Shields can be flanked, meleed, or blasted. Special weapons
+switch back to the unlimited sidearm when empty. Shoot restraints or interact to
+rescue crew.
 Several encounters arrive in pairs. Infantry and shield troops may start prone
 or visibly lower themselves before firing along the ground; prone troops stay
 put. Both stances occasionally telegraph a grenade throw before its bouncing,
