@@ -7,6 +7,7 @@ import 'package:super_bros/game/config/game_config.dart';
 import 'package:super_bros/game/core/game_state.dart';
 import 'package:super_bros/game/core/progress_store.dart';
 import 'package:super_bros/game/rendering/pixel_art.dart';
+import 'package:super_bros/game/rendering/art_assets.dart';
 import 'package:super_bros/game/ui/menu_state.dart';
 import 'package:super_bros/game/ui/ruckus_app.dart';
 
@@ -57,6 +58,8 @@ void step(RuckusShellState shell, double seconds) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(ArtAssets.load);
   testWidgets(
     'title, back, locking, and keyboard deployment use actual menus',
     (tester) async {

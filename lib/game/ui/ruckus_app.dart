@@ -9,14 +9,15 @@ import '../core/game_state.dart';
 import '../core/progress_store.dart';
 import '../input/input_router.dart';
 import '../rendering/pixel_art.dart';
+import '../rendering/art_assets.dart';
 import '../side_scroller_game.dart';
 import 'menu_state.dart';
 
-const ink = Color(0xff102c3a);
-const cream = Color(0xffffedbf);
-const gold = Color(0xffffc857);
-const mint = Color(0xff67ddbd);
-const coral = Color(0xfff87754);
+const ink = Color(0xff1b2229);
+const cream = Color(0xffefe0c3);
+const gold = Color(0xffed9c45);
+const mint = Color(0xff8eb9c3);
+const coral = Color(0xffdc6034);
 
 class RuckusApp extends StatelessWidget {
   const RuckusApp({super.key, required this.progress});
@@ -555,13 +556,19 @@ class RuckusShellState extends State<RuckusShell>
                               color: l.locked ? const Color(0xff263c48) : mint,
                               border: Border.all(color: ink, width: 3),
                             ),
-                            child: Center(
-                              child: Icon(
-                                icons[index],
-                                size: 58,
-                                color: l.locked ? Colors.blueGrey : ink,
-                              ),
-                            ),
+                            child:
+                                !l.locked && ArtAssets.ready
+                                    ? CustomPaint(
+                                      painter: _MissionPainter(index),
+                                      child: const SizedBox.expand(),
+                                    )
+                                    : Center(
+                                      child: Icon(
+                                        icons[index],
+                                        size: 58,
+                                        color: l.locked ? Colors.blueGrey : ink,
+                                      ),
+                                    ),
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -685,8 +692,8 @@ class RuckusShellState extends State<RuckusShell>
               const Text(
                 'JUGGERNAUT ASSAULT\n\n'
                 'An original retro-comic arcade adventure.\n'
-                'Juggernauts, transit hubs, vehicles, effects, and pixel artwork\n'
-                'are drawn in code for this game. No borrowed game assets.\n\n'
+                'Character art extracted from the supplied Juggernaut concept sheets.\n'
+                'Original environment and equipment artwork, with code-driven effects.\n\n'
                 'Built with Flutter + Flame.\n'
                 'Audio is intentionally silent; event hooks are ready\n'
                 'for a future original soundtrack and sound effects.\n\n'
@@ -1112,10 +1119,10 @@ class _PortraitPainter extends CustomPainter {
   final bool locked;
   @override
   void paint(Canvas canvas, Size size) {
-    final scale = math.min(size.width / 48, size.height / 58);
+    final scale = math.min(size.width / 64, size.height / 72);
     PixelArt.paintPortrait(
       canvas,
-      Offset((size.width - 48 * scale) / 2, (size.height - 58 * scale) / 2),
+      Offset((size.width - 64 * scale) / 2, (size.height - 72 * scale) / 2),
       scale,
       variant: variant,
       locked: locked,
@@ -1135,6 +1142,17 @@ class _HarborPainter extends CustomPainter {
       PixelArt.paintHarbor(canvas, size, time);
   @override
   bool shouldRepaint(_HarborPainter oldDelegate) => time != oldDelegate.time;
+}
+
+class _MissionPainter extends CustomPainter {
+  _MissionPainter(this.mission);
+  final int mission;
+  @override
+  void paint(Canvas canvas, Size size) =>
+      ArtAssets.missionPreview(canvas, size, mission);
+  @override
+  bool shouldRepaint(_MissionPainter oldDelegate) =>
+      mission != oldDelegate.mission;
 }
 
 class _HoldButton extends StatefulWidget {

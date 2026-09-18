@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import '../config/game_config.dart';
 import '../core/game_state.dart';
+import 'art_assets.dart';
 
 /// Stable art identifiers: a sprite atlas can replace these drawings later.
 enum SpriteId {
@@ -106,6 +107,14 @@ abstract final class PixelArt {
     canvas.save();
     canvas.translate(offset.dx, offset.dy);
     canvas.scale(scale);
+    if (ArtAssets.portrait(
+      canvas,
+      const Rect.fromLTWH(0, 0, 64, 72),
+      variant,
+    )) {
+      canvas.restore();
+      return;
+    }
     final id = variant.clamp(0, 4);
     final unitLabel = id == 1 ? '02' : '0${id + 1}';
     final (armor, accent, skin, hair, helmet) = _unitColors(id, locked: locked);
@@ -258,11 +267,12 @@ abstract final class PixelArt {
     canvas.scale(scale);
     _harbor(canvas, time, time * 2);
     _menuGrit(canvas, time);
-    _dock(canvas, 0, time);
+    if (!ArtAssets.floor(canvas, 0, time * 2)) _dock(canvas, 0, time);
     canvas.restore();
   }
 
   static void _menuGrit(Canvas c, double time) {
+    if (ArtAssets.ready) return;
     _plate(c, 18, 18, 178, 31, ink);
     pixelText(c, 'JUGGERNAUTS', 28, 28, cream, scale: 2);
     pixelText(c, 'ASSAULT', 115, 29, orange);
@@ -279,6 +289,7 @@ abstract final class PixelArt {
   }
 
   static void _harbor(Canvas c, double time, double camera) {
+    if (ArtAssets.backdrop(c, 0, camera)) return;
     _r(c, 0, 0, 480, 270, const Color(0xff477f83));
     _r(c, 0, 34, 480, 34, const Color(0xff73978c));
     _r(c, 0, 68, 480, 32, const Color(0xffb6b798));
@@ -336,6 +347,7 @@ abstract final class PixelArt {
   }
 
   static void _airport(Canvas c, double time, double camera) {
+    if (ArtAssets.backdrop(c, 1, camera)) return;
     _r(c, 0, 0, 480, 270, const Color(0xff25375a));
     _r(c, 0, 31, 480, 42, const Color(0xff5aa7c8));
     _r(c, 0, 73, 480, 45, const Color(0xffd6b783));
@@ -559,7 +571,7 @@ abstract final class PixelArt {
     }
   }
 
-  static void renderScene(Canvas c, GameState s) {
+  static void renderScene(Canvas c, GameState s, {double? artTime}) {
     c.save();
     if (s.shake > 0) {
       c.translate(
@@ -573,8 +585,10 @@ abstract final class PixelArt {
     } else {
       _harbor(c, s.elapsed, s.cameraX);
     }
-    _worldScenery(c, s);
-    _dock(c, s.cameraX, s.elapsed, airport: airport);
+    if (!ArtAssets.ready) _worldScenery(c, s);
+    if (!ArtAssets.floor(c, s.missionIndex, s.cameraX)) {
+      _dock(c, s.cameraX, s.elapsed, airport: airport);
+    }
     c.save();
     c.translate(-s.cameraX.roundToDouble(), 0);
     for (final platform in s.platforms) {
@@ -795,22 +809,48 @@ abstract final class PixelArt {
     final player = s.player;
     if (!player.inVehicle &&
         !(player.invulnerable > 0 && (s.elapsed * 18).floor().isEven)) {
-      _entitySprite(
+      final state =
+          s.status == MissionStatus.gameOver
+              ? 'death'
+              : s.status == MissionStatus.victory
+              ? 'taunt'
+              : player.invulnerable > .7
+              ? 'hurt'
+              : player.crouching
+              ? 'crouch'
+              : !player.grounded
+              ? 'jump'
+              : player.fireCooldown > .06
+              ? 'fire'
+              : player.vx.abs() > 1
+              ? 'run'
+              : 'idle';
+      if (!ArtAssets.character(
         c,
-        SpriteId.rook,
-        player.x,
-        player.y,
-        player.width,
-        player.height,
-        s.elapsed,
+        s.characterIndex,
+        state,
+        ArtAssets.poseTime(s, state, artTime ?? s.elapsed),
+        player.centerX,
+        player.y + player.height,
         facing: player.facing,
-        moving: player.vx.abs() > 1,
-        crouching: player.crouching,
-        firing: player.fireCooldown > .06,
-        airborne: !player.grounded,
-        variant: player.weapon.index,
-        character: s.characterIndex,
-      );
+      )) {
+        _entitySprite(
+          c,
+          SpriteId.rook,
+          player.x,
+          player.y,
+          player.width,
+          player.height,
+          s.elapsed,
+          facing: player.facing,
+          moving: player.vx.abs() > 1,
+          crouching: player.crouching,
+          firing: player.fireCooldown > .06,
+          airborne: !player.grounded,
+          variant: player.weapon.index,
+          character: s.characterIndex,
+        );
+      }
     }
     for (final shot in s.projectiles) {
       if (!_visible(shot.x, shot.width + 12, s)) continue;
@@ -1144,6 +1184,71 @@ abstract final class PixelArt {
     int variant = 0,
     int character = 0,
   }) {
+    if (ArtAssets.ready && id != SpriteId.rook) {
+      final frame = switch (id) {
+        SpriteId.infantry =>
+          firing
+              ? 3
+              : moving
+              ? 1 + (time * 9).floor() % 2
+              : 0,
+        SpriteId.shield => 6,
+        SpriteId.engineer => 7,
+        SpriteId.turret => 8,
+        SpriteId.vehicle => 9,
+        SpriteId.walker => 10,
+        SpriteId.crate => 11,
+        SpriteId.barrel => 12,
+        SpriteId.health => 13,
+        SpriteId.grenade => 14,
+        _ => 15,
+      };
+      final human =
+          id == SpriteId.infantry ||
+          id == SpriteId.shield ||
+          id == SpriteId.engineer;
+      final artWidth = human ? 48.0 : width * 1.18;
+      final artHeight = human ? 44.0 : height * 1.18;
+      ArtAssets.equipment(
+        c,
+        frame,
+        Rect.fromLTWH(
+          x + width / 2 - artWidth / 2,
+          y + height - artHeight,
+          artWidth,
+          artHeight,
+        ),
+        facing: facing,
+      );
+      if (id == SpriteId.walker) {
+        // The exposed core and charging lights remain tied to simulation state.
+        _plate(
+          c,
+          x + width * .4,
+          y + height * .35,
+          width * .18,
+          height * .16,
+          variant == 1
+              ? mint
+              : firing
+              ? hazard
+              : rust,
+        );
+        if (variant == 1) {
+          _spark(c, x + width * .49, y + height * .42, time * 3, white);
+        }
+      }
+      if (firing && id != SpriteId.walker) {
+        _spark(
+          c,
+          x + (facing > 0 ? width + 3 : -3),
+          y + height * .38,
+          time * 4,
+          gold,
+        );
+      }
+      return;
+    }
     final (w, h) = switch (id) {
       SpriteId.rook => (32.0, 42.0),
       SpriteId.infantry => (23.0, 28.0),
@@ -1305,6 +1410,27 @@ abstract final class PixelArt {
   }
 
   static void _proneSoldier(Canvas c, Enemy enemy, double time) {
+    if (ArtAssets.ready) {
+      final prone = enemy.stance == EnemyStance.prone;
+      ArtAssets.equipment(
+        c,
+        prone ? 5 : 4,
+        Rect.fromLTWH(
+          enemy.centerX - 24,
+          enemy.y + enemy.height - (prone ? 20 : 30),
+          48,
+          prone ? 20 : 30,
+        ),
+        facing: enemy.facing,
+      );
+      if (enemy.throwingGrenade) {
+        _spark(c, enemy.centerX, enemy.y - 3, time * 3, gold);
+      }
+      if (enemy.mode == EnemyMode.attack && enemy.combatEnabled) {
+        _spark(c, enemy.muzzleX, enemy.muzzleY, time * 4, gold);
+      }
+      return;
+    }
     c.save();
     c.translate(enemy.facing > 0 ? enemy.x : enemy.x + enemy.width, enemy.y);
     c.scale(enemy.facing.toDouble(), 1);
