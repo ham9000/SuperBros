@@ -175,12 +175,18 @@ abstract final class PixelArt {
         _r(canvas, 51, 51, 4, 2, ink);
         _r(canvas, 46, 59, 11, 2, accent);
       } else if (id == 2) {
-        _r(canvas, 18, 14, 29, 8, hair);
-        _r(canvas, 42, 10, 7, 10, hair);
-        _r(canvas, 48, 6, 8, 9, hair);
-        _r(canvas, 55, 8, 4, 13, hair);
-        _r(canvas, 20, 22, 4, 13, hair);
-        _r(canvas, 24, 36, 6, 2, cream);
+        _r(canvas, 17, 13, 30, 9, hair);
+        _r(canvas, 16, 20, 8, 17, hair);
+        _r(canvas, 40, 11, 9, 9, hair);
+        _r(canvas, 48, 7, 10, 8, hair);
+        _r(canvas, 56, 9, 7, 16, hair);
+        _r(canvas, 53, 23, 6, 9, hair);
+        _r(canvas, 25, 12, 17, 3, red);
+        _r(canvas, 16, 37, 11, 3, red);
+        _r(canvas, 24, 36, 8, 2, cream);
+        _r(canvas, 37, 36, 4, 2, ink);
+        _r(canvas, 42, 30, 6, 3, const Color(0xfff0c0a0));
+        _r(canvas, 47, 29, 7, 2, cream);
       } else if (id == 3) {
         _r(canvas, 20, 14, 25, 6, hair);
         _r(canvas, 18, 18, 30, 5, hair);
@@ -1139,7 +1145,7 @@ abstract final class PixelArt {
     int character = 0,
   }) {
     final (w, h) = switch (id) {
-      SpriteId.rook => (18.0, 30.0),
+      SpriteId.rook => (32.0, 42.0),
       SpriteId.infantry => (23.0, 28.0),
       SpriteId.shield => (27.0, 31.0),
       SpriteId.turret => (26.0, 24.0),
@@ -1193,92 +1199,108 @@ abstract final class PixelArt {
   ) {
     final id = character.clamp(0, 4);
     final (armor, accent, skin, hair, helmet) = _unitColors(id);
-    final step = moving ? (math.sin(time * 17) * 3).round() : 0;
+    final step = moving ? (math.sin(time * 17) * 4).round() : 0;
     final bob = moving && step > 0 ? 1 : 0;
-    _r(c, 0, 29, 20, 2, deepTeal);
+    _r(c, 1, 40, 31, 2, deepTeal);
     c.save();
     c.translate(0, crouching ? 7 : bob.toDouble());
-    final bodyTop = crouching ? 14 : 11 - (airborne ? 2 : 0);
-    final legY = crouching ? 20 : 23 - (airborne ? 3 : 0);
-    _plate(c, 2 - step, legY, 7, crouching ? 2 : 6, ink);
-    _r(c, 3 - step, legY, 4, crouching ? 1 : 4, armor);
-    _r(c, 1 - step, crouching ? 20 : 28 - (airborne ? 3 : 0), 8, 2, ink);
-    _plate(c, 10 + step, legY - 1, 6, crouching ? 2 : 7, ink);
-    _r(c, 11 + step, legY, 4, crouching ? 1 : 4, id == 1 ? royal : armor);
-    _r(c, 10 + step, crouching ? 20 : 28, 8, 2, ink);
-    _plate(c, 1, bodyTop, 16, crouching ? 8 : 13, armor);
-    _r(c, 3, bodyTop + 2, 5, 4, accent);
-    _r(c, 10, bodyTop + 2, 5, 4, accent);
-    _r(c, 7, bodyTop + 4, 3, crouching ? 3 : 8, midnight);
-    _r(c, 3, bodyTop + 9, 11, 2, ink);
-    _r(c, 8, bodyTop + 10, 3, 2, cream);
-    _plate(c, -1, bodyTop + 3, 5, 8, armor);
-    _plate(c, 13, bodyTop + 3, 5, 8, armor);
-    _r(c, -1, bodyTop + 4, 4, 3, accent);
-    _r(c, 14, bodyTop + 4, 3, 3, accent);
+    final bodyTop = crouching ? 21 : 15 - (airborne ? 3 : 0);
+    final legY = crouching ? 30 : 31 - (airborne ? 4 : 0);
+    _plate(c, 5 - step, legY, 8, crouching ? 3 : 9, ink);
+    _r(c, 7 - step, legY + 1, 4, crouching ? 1 : 6, armor);
+    _r(c, 6 - step, legY + 3, 3, 3, accent);
+    _r(c, 3 - step, crouching ? 31 : 39 - (airborne ? 4 : 0), 11, 3, ink);
+    _r(c, 4 - step, crouching ? 31 : 38 - (airborne ? 4 : 0), 7, 2, white);
+    _plate(c, 17 + step, legY - 1, 8, crouching ? 3 : 10, ink);
+    _r(c, 19 + step, legY, 4, crouching ? 1 : 7, id == 1 ? royal : armor);
+    _r(c, 18 + step, legY + 3, 3, 3, accent);
+    _r(c, 16 + step, crouching ? 31 : 39, 11, 3, ink);
+    _r(c, 17 + step, crouching ? 31 : 38, 7, 2, white);
+    _plate(c, 5, bodyTop, 21, crouching ? 10 : 17, armor);
+    _r(c, 8, bodyTop + 2, 6, 5, white);
+    _r(c, 17, bodyTop + 2, 6, 5, white);
+    _r(c, 7, bodyTop + 3, 5, 4, accent);
+    _r(c, 19, bodyTop + 3, 4, 4, accent);
+    _r(c, 13, bodyTop + 5, 5, crouching ? 3 : 10, midnight);
+    _r(c, 8, bodyTop + 11, 16, 3, ink);
+    _r(c, 13, bodyTop + 12, 5, 2, cream);
+    _r(c, 4, bodyTop + 15, 22, 2, steel);
+    _plate(c, 1, bodyTop + 5, 7, 10, armor);
+    _plate(c, 24, bodyTop + 5, 7, 10, armor);
+    _r(c, 2, bodyTop + 7, 5, 3, accent);
+    _r(c, 25, bodyTop + 7, 4, 3, accent);
+    _r(c, 2, bodyTop + 15, 4, 4, ink);
+    _r(c, 26, bodyTop + 15, 4, 4, ink);
 
     if (helmet) {
-      _plate(c, 2, 1, 16, 13, royal);
-      _r(c, 4, 3, 12, 3, accent);
-      _r(c, 5, 5, 11, 5, ink);
-      _r(c, 12, 6, 3, 2, const Color(0xff05070c));
-      _r(c, 3, 10, 13, 3, royal);
-      _r(c, 5, 12, 4, 1, sky);
-      _r(c, 2, 1, 1, 5, cream);
-      _r(c, 5, 1, 1, 5, cream);
-      _line(c, 11, 2, 15, 1, orange);
-      _r(c, 14, 10, 3, 3, accent);
-      pixelText(c, '2', 4, 15, cream);
+      _plate(c, 6, 1, 20, 17, royal);
+      _r(c, 8, 3, 15, 4, white);
+      _r(c, 8, 7, 16, 7, ink);
+      _r(c, 12, 8, 10, 3, const Color(0xff05070c));
+      _r(c, 24, 8, 3, 6, accent);
+      _r(c, 4, 8, 4, 7, accent);
+      _r(c, 8, 15, 15, 4, royal);
+      _r(c, 11, 17, 7, 1, sky);
+      _r(c, 8, 2, 2, 7, cream);
+      _r(c, 12, 2, 1, 7, cream);
+      _line(c, 17, 3, 23, 2, orange);
+      _r(c, 24, 14, 5, 5, accent);
+      pixelText(c, '2', 9, 21, cream);
     } else {
-      _plate(c, 3, 2, 14, 12, ink);
-      _r(c, 5, 5, 11, 7, skin);
-      _r(c, 12, 6, 3, 2, ink);
-      _r(c, 15, 8, 2, 2, skin);
-      _r(c, 11, 11, 4, 1, rust);
+      _plate(c, 7, 3, 18, 15, ink);
+      _r(c, 10, 7, 13, 8, skin);
+      _r(c, 18, 8, 4, 2, ink);
+      _r(c, 22, 10, 2, 2, skin);
+      _r(c, 17, 13, 5, 1, rust);
+      _r(c, 11, 10, 3, 1, cream);
       if (id == 0) {
-        _r(c, 2, 3, 15, 4, hair);
-        _r(c, 5, 0, 3, 5, hair);
-        _r(c, 9, 0, 3, 5, hair);
-        _r(c, 13, 1, 3, 5, hair);
-        _r(c, 1, 5, 4, 5, hair);
-        _r(c, -4, 17, 5, 4, cream);
-        _r(c, -5, 15, 4, 2, ink);
+        _r(c, 6, 4, 18, 4, hair);
+        _r(c, 10, 0, 4, 6, hair);
+        _r(c, 15, 0, 3, 6, hair);
+        _r(c, 20, 1, 4, 6, hair);
+        _r(c, 5, 7, 5, 7, hair);
+        _r(c, -4, 24, 7, 5, cream);
+        _r(c, -5, 22, 5, 2, ink);
       } else if (id == 2) {
-        _r(c, 2, 3, 15, 4, hair);
-        _r(c, 1, 6, 4, 8, hair);
-        _r(c, 15, 2, 5, 4, hair);
-        _r(c, 19, 0, 5, 4, hair);
-        _r(c, 22, 2, 3, 9, hair);
-        _r(c, 5, 10, 5, 1, cream);
+        _r(c, 6, 4, 18, 5, hair);
+        _r(c, 5, 7, 6, 10, hair);
+        _r(c, 21, 3, 7, 5, hair);
+        _r(c, 27, 0, 7, 5, hair);
+        _r(c, 32, 2, 5, 12, hair);
+        _r(c, 30, 12, 4, 5, hair);
+        _r(c, 8, 15, 7, 2, red);
+        _r(c, 24, 17, 4, 5, red);
+        _r(c, 12, 13, 6, 1, cream);
       } else if (id == 3) {
-        _r(c, 3, 3, 14, 3, hair);
-        _r(c, 2, 5, 15, 3, hair);
-        _r(c, 3, 7, 4, 4, hair);
+        _r(c, 7, 4, 17, 4, hair);
+        _r(c, 6, 7, 18, 3, hair);
+        _r(c, 7, 9, 5, 6, hair);
       } else {
-        _r(c, 2, 3, 15, 4, hair);
-        _r(c, 1, 6, 5, 8, hair);
-        _r(c, 14, 5, 5, 10, hair);
-        _r(c, 18, 10, 4, 5, hair);
+        _r(c, 6, 4, 18, 5, hair);
+        _r(c, 5, 7, 6, 10, hair);
+        _r(c, 22, 6, 6, 12, hair);
+        _r(c, 28, 13, 4, 6, hair);
+        _r(c, 10, 2, 13, 2, red);
       }
     }
-    final armY = crouching ? 16 : 15;
-    _plate(c, 10, armY, 9, 5, cream);
-    _r(c, 15, armY, 12, 4, ink);
-    _r(c, 17, armY, 8, 1, steel);
-    _r(c, 15, armY + 4, 3, 4, ink);
-    _r(c, 23, armY + 1, 5, 2, navy);
+    final armY = crouching ? 24 : 21;
+    _plate(c, 18, armY, 13, 6, white);
+    _r(c, 22, armY + 1, 17, 4, ink);
+    _r(c, 24, armY + 1, 11, 1, steel);
+    _r(c, 22, armY + 5, 4, 5, ink);
+    _r(c, 33, armY + 2, 7, 2, navy);
     if (weapon == 1) {
-      _r(c, 16, armY - 1, 12, 2, sky);
-      _r(c, 21, armY + 4, 3, 4, steel);
-      _r(c, 27, armY, 5, 3, ink);
+      _r(c, 23, armY - 1, 18, 2, sky);
+      _r(c, 31, armY + 5, 4, 5, steel);
+      _r(c, 40, armY, 6, 4, ink);
     } else if (weapon == 2) {
-      _plate(c, 13, armY - 2, 17, 7, royal);
-      _r(c, 15, armY - 1, 11, 2, sky);
-      _r(c, 27, armY - 3, 4, 9, ink);
-      _r(c, 28, armY - 1, 2, 5, gold);
+      _plate(c, 20, armY - 2, 23, 8, royal);
+      _r(c, 23, armY - 1, 15, 2, sky);
+      _r(c, 40, armY - 3, 5, 11, ink);
+      _r(c, 41, armY - 1, 3, 6, gold);
     }
-    if (firing) _muzzle(c, weapon == 2 ? 31 : 29, armY + 2, time);
-    if (airborne) _spark(c, 2, 27, time, accent);
+    if (firing) _muzzle(c, weapon == 2 ? 46 : 42, armY + 3, time);
+    if (airborne) _spark(c, 5, 38, time, accent);
     c.restore();
   }
 
